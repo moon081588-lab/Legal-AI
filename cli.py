@@ -19,7 +19,7 @@ from rag.answer import answer
 
 def main() -> None:
     if len(sys.argv) < 2:
-        raise SystemExit('Usage: python cli.py "질문"')
+        raise SystemExit('사용법: python cli.py "질문 내용"  — 질문을 함께 입력해 주세요.')
     question = " ".join(sys.argv[1:])
 
     retriever = Retriever()
@@ -32,7 +32,7 @@ def main() -> None:
 
     result = answer(question, articles)
     if result is None:
-        print("\nANTHROPIC_API_KEY가 없어 답변 생성은 건너뜁니다. 위 조문 원문:")
+        print("\nANTHROPIC_API_KEY가 설정되어 있지 않아 답변 생성은 건너뜁니다. 위 조문의 원문을 보여드립니다:")
         for a in articles[:3]:
             print(f"\n--- {a['law_name']} {a['article_no']} ---\n{a['text'][:600]}")
     else:

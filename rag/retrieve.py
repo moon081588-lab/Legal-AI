@@ -46,7 +46,7 @@ class Retriever:
     def __init__(self, data_path: Path | None = None):
         path = data_path or (DEFAULT_DATA if DEFAULT_DATA.exists() else SAMPLE_DATA)
         if not path.exists():
-            raise SystemExit("No article data. Run the ingest scripts or keep data/sample/.")
+            raise SystemExit("조문 데이터가 없습니다. ingest 스크립트를 실행하시거나 data/sample/을 유지해 주세요.")
         self.path = path
         self.articles = [json.loads(l) for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
         corpus = [

@@ -26,7 +26,7 @@ RAW_DIR = ROOT / "data" / "raw"
 def api_get(endpoint: str, **params) -> bytes:
     oc = os.environ.get("LAW_GO_KR_OC")
     if not oc:
-        sys.exit("Set LAW_GO_KR_OC to your open.law.go.kr registered id (the part before @ in your email).")
+        sys.exit("LAW_GO_KR_OC 환경변수를 설정해 주세요. open.law.go.kr에 가입한 아이디(이메일의 @ 앞부분)입니다.")
     qs = urlencode({"OC": oc, "type": "XML", **params})
     url = f"{BASE}/{endpoint}?{qs}"
     with urlopen(url, timeout=30) as r:
@@ -62,12 +62,12 @@ def main() -> None:
     for name in names:
         info = search_law(name)
         if not info:
-            print(f"[skip] not found: {name}")
+            print(f"[건너뜀] 법령을 찾지 못했습니다: {name}")
             continue
         xml = fetch_law_xml(info["mst"])
         out = RAW_DIR / f"{info['law_id']}.xml"
         out.write_bytes(xml)
-        print(f"[ok] {name} (MST={info['mst']}, 시행 {info['effective_date']}) -> {out.name}")
+        print(f"[완료] {name} (MST={info['mst']}, 시행 {info['effective_date']}) -> {out.name}")
         time.sleep(0.5)  # be polite to the API
 
 

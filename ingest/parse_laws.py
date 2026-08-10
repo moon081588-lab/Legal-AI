@@ -66,17 +66,17 @@ def parse_file(path: Path) -> list[dict]:
 def main() -> None:
     files = sorted(RAW_DIR.glob("*.xml"))
     if not files:
-        raise SystemExit(f"No raw XML in {RAW_DIR}. Run ingest/fetch_laws.py first.")
+        raise SystemExit(f"{RAW_DIR}에 XML 파일이 없습니다. 먼저 ingest/fetch_laws.py를 실행해 주세요.")
     all_records = []
     for f in files:
         recs = parse_file(f)
-        print(f"[ok] {f.name}: {len(recs)} articles ({recs[0]['law_name'] if recs else '?'})")
+        print(f"[완료] {f.name}: 조문 {len(recs)}건 ({recs[0]['law_name'] if recs else '?'})")
         all_records.extend(recs)
     OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     with OUT_FILE.open("w", encoding="utf-8") as out:
         for r in all_records:
             out.write(json.dumps(r, ensure_ascii=False) + "\n")
-    print(f"Wrote {len(all_records)} articles -> {OUT_FILE}")
+    print(f"조문 {len(all_records)}건을 저장했습니다 -> {OUT_FILE}")
 
 
 if __name__ == "__main__":

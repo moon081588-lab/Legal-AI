@@ -1,85 +1,85 @@
-# Legal-AI — Architecture Plan
+# Legal-AI — 아키텍처 설계서
 
-**Korean paralegal AI web chat for the general public**
-Repo: github.com/moon081588-lab/Legal-AI · Draft v1 · 2026-08-10
+**일반인을 위한 대한민국 생활법령 AI 웹 채팅 서비스**
+저장소: github.com/moon081588-lab/Legal-AI · v1 · 2026-08-10
 
-## 1. What it is
+## 1. 서비스 개요
 
-A web chat app where ordinary people ask everyday legal questions in plain Korean (leases/jeonse, labor, contracts, traffic, family) and get answers grounded in actual Korean statutes, with article-level citations. It is a legal *information* assistant, not a lawyer: every answer explains the relevant law and cites it, and directs users to a licensed attorney or public legal aid for case-specific advice.
+일반인이 일상적인 법률 질문(전세·임대차, 노동, 계약, 교통, 가족 등)을 쉬운 한국어로 물어보면, 실제 대한민국 법령에 근거하여 조문 단위 출처와 함께 답변하는 웹 채팅 서비스입니다. 본 서비스는 변호사가 아닌 법령 *정보* 도우미입니다. 모든 답변은 관련 법령을 설명하고 출처를 인용하며, 개별 사안에 대해서는 변호사 또는 공공 법률구조 서비스 상담을 안내합니다.
 
-## 2. Legal constraints that shape the design
+## 2. 설계를 규정하는 법적 제약
 
-These are design requirements, not fine print:
+아래 사항은 단순한 주의문구가 아니라 설계 요구사항입니다.
 
-**Attorney-at-Law Act (변호사법).** Paid legal advice by non-lawyers is prohibited in Korea, and this has been applied to AI chatbot services. Services that explain legal principles and locate relevant statutes/precedents are generally viewed as permissible; personalized "you should sue / you will win" advice is not. Design consequence: the system prompt hard-constrains answers to explaining law + citing sources + suggesting professional help; the MVP is free; monetization waits for the pending LegalTech Promotion Act to clarify the rules.
+**변호사법.** 대한민국에서 변호사가 아닌 자의 유상 법률 사무는 금지되며, AI 챗봇 서비스에도 이 기준이 적용되어 왔습니다. 법리를 설명하고 관련 법령·판례를 찾아주는 서비스는 일반적으로 허용되는 것으로 해석되지만, "소송하세요 / 이길 수 있습니다" 같은 개별적 자문은 허용되지 않습니다. 설계 반영: 시스템 프롬프트로 답변을 법령 설명 + 출처 인용 + 전문가 상담 안내로 엄격히 제한하고, MVP는 무료로 운영하며, 수익화는 계류 중인 리걸테크 진흥법으로 기준이 명확해진 이후에 검토합니다.
 
-**AI Basic Act (AI 기본법, effective 2026-01-22).** Generative AI output must be disclosed as AI-generated, and transparency/safety obligations apply. Design consequence: persistent "AI-generated, not legal advice" labeling in the UI and in every answer.
+**AI 기본법 (2026-01-22 시행).** 생성형 AI 산출물은 AI 생성물임을 표시해야 하며, 투명성·안전성 의무가 적용됩니다. 설계 반영: UI와 모든 답변에 "AI 생성 · 법률 자문 아님" 표시를 상시 노출합니다.
 
-## 3. High-level architecture
+## 3. 전체 구조
 
 ```
-User ──> Web chat UI (Next.js)
+사용자 ──> 웹 채팅 UI (Next.js)
               │
               ▼
-        API backend (FastAPI, Python)
+        API 백엔드 (FastAPI, Python)
          │            │
          ▼            ▼
-   RAG retriever   Claude API (Sonnet)
-         │         (answer synthesis w/ citations)
+   RAG 검색기      Claude API (Sonnet)
+         │         (조문 인용 답변 생성)
          ▼
-   Vector DB + keyword index (hybrid search)
+   벡터 DB + 키워드 인덱스 (하이브리드 검색)
          ▲
-         │  nightly/weekly sync
-   Ingestion pipeline ◄── law.go.kr Open API (법제처 국가법령정보)
+         │  일간/주간 동기화
+   수집 파이프라인 ◄── law.go.kr Open API (법제처 국가법령정보)
 ```
 
-## 4. Data layer
+## 4. 데이터 계층
 
-**Source.** The Ministry of Government Legislation's Open API (open.law.go.kr) is free with registration and provides current statutes as structured XML/JSON: a list-search API returns law serial numbers, and a full-text API returns the complete law body down to article/paragraph/item level (조·항·호·목), plus effective dates, amendment history, and administrative interpretations (법령해석례). Precedents can be added later via the same platform's case-law endpoints.
+**출처.** 법제처 국가법령정보 Open API(open.law.go.kr)는 무료 회원가입 후 이용 가능하며, 현행 법령을 구조화된 XML/JSON으로 제공합니다. 목록 조회 API로 법령일련번호(MST)를 얻고, 본문 조회 API로 조·항·호·목 단위의 전문과 시행일자, 제·개정 이력, 법령해석례까지 받을 수 있습니다. 판례는 이후 같은 플랫폼의 판례 API로 추가합니다.
 
-**Ingestion.** A scheduled Python job pulls target statutes, parses them into article-level records (`law_id, law_name, article_no, clause_no, text, effective_date, source_url`), and upserts changed articles only. Start with ~30 high-demand statutes: 주택임대차보호법, 근로기준법, 민법 (핵심 편), 도로교통법, 소비자기본법, 가족관계 관련 법 등.
+**수집.** 예약 실행되는 Python 작업이 대상 법령을 내려받아 조문 단위 레코드(`law_id, law_name, article_no, clause_no, text, effective_date, source_url`)로 파싱하고, 변경된 조문만 갱신합니다. 수요가 많은 약 30개 법령부터 시작합니다: 주택임대차보호법, 근로기준법, 민법(핵심 편), 도로교통법, 소비자기본법, 가족관계 관련 법령 등.
 
-**Chunking.** Chunk by article (조), keeping the law name + article heading in every chunk so retrieval and citation stay precise. Korean statutes are naturally article-sized, so this avoids arbitrary splitting.
+**청킹.** 조(條) 단위로 분할하되, 모든 청크에 법령명과 조문 제목을 포함시켜 검색과 인용의 정확도를 유지합니다. 한국 법령은 조문 자체가 적절한 크기이므로 임의 분할이 필요 없습니다.
 
-**Storage.** Postgres + pgvector for the MVP (one database for both metadata and vectors — cheap, simple), with a keyword index (Postgres full-text or a BM25 layer) for hybrid search. Korean legal terms are exact-match-sensitive (e.g. 전세권 vs 임차권), so hybrid retrieval materially beats pure vector search. Embeddings: a multilingual/Korean-capable model (e.g. BGE-M3 or a commercial embedding API).
+**저장소.** MVP는 Postgres + pgvector(메타데이터와 벡터를 한 DB에서 관리 — 저렴하고 단순함)에 키워드 인덱스(Postgres 전문검색 또는 BM25 계층)를 더한 하이브리드 검색을 사용합니다. 한국 법률 용어는 정확 일치가 중요하므로(예: 전세권 vs 임차권) 하이브리드 검색이 순수 벡터 검색보다 성능이 확연히 좋습니다. 임베딩은 한국어 지원 모델(BGE-M3 또는 상용 임베딩 API)을 사용합니다.
 
-## 5. Answer pipeline (RAG)
+## 5. 답변 파이프라인 (RAG)
 
-Per question: (1) Claude rewrites the user's colloquial question into legal search terms ("월세 보증금을 못 돌려받아요" → 주택임대차보호법, 보증금 반환, 임차권등기명령); (2) hybrid search returns top-k article chunks; (3) Claude Sonnet synthesizes an answer under a constrained system prompt — plain Korean, cite every claim as (법령명 제N조), only use retrieved text, say "확인할 수 없습니다" when retrieval is empty rather than guessing, and append the referral line (대한법률구조공단 132, 지역 법률홈닥터 등) plus the AI disclosure notice; (4) answers stream with an expandable "근거 조문" panel showing the cited article text and law.go.kr links.
+질문마다 다음 순서로 처리합니다. (1) Claude가 구어체 질문을 법률 검색어로 변환합니다("월세 보증금을 못 돌려받아요" → 주택임대차보호법, 보증금 반환, 임차권등기명령). (2) 하이브리드 검색으로 상위 k개 조문 청크를 가져옵니다. (3) Claude Sonnet이 제약된 시스템 프롬프트 하에 답변을 생성합니다 — 쉬운 한국어로, 모든 주장에 (법령명 제N조) 인용, 검색된 조문만 근거로 사용, 검색 결과가 없으면 추측하지 않고 "확인할 수 없습니다"라고 답변, 마지막에 상담 안내(대한법률구조공단 132, 법률홈닥터 등)와 AI 생성물 고지 첨부. (4) 답변은 스트리밍되며, 인용된 조문 원문과 law.go.kr 링크를 보여주는 "근거 조문" 패널이 함께 제공됩니다.
 
-A lightweight classifier step routes out-of-scope requests (litigation strategy, "will I win", document drafting for filing) to a polite scope message instead of the RAG pipeline — this is the main Attorney-at-Law Act guardrail.
+경량 분류 단계가 범위 밖 요청(소송 전략, 승패 예측, 제출용 서면 작성)을 RAG 파이프라인 대신 정중한 안내 메시지로 라우팅합니다. 이것이 변호사법 준수의 핵심 가드레일입니다.
 
-## 6. Stack summary
+## 6. 기술 스택 요약
 
-| Layer | Choice | Why |
+| 계층 | 선택 | 이유 |
 |---|---|---|
-| Frontend | Next.js + Tailwind, Vercel | Fast to build, streaming chat, Korean i18n trivial |
-| Backend | FastAPI (Python) | Same language as ingestion; async streaming |
-| LLM | Claude Sonnet via API | Strong Korean, citation-following, cost-reasonable |
-| DB | Postgres + pgvector (Supabase or RDS) | One system for metadata + vectors + keyword search |
-| Ingestion | Python cron (GitHub Actions schedule works for MVP) | Free, versioned in-repo |
-| Evals | Question set of ~100 real questions, graded on citation accuracy | Catch hallucinated articles before users do |
+| 프론트엔드 | Next.js + Tailwind, Vercel | 빠른 개발, 스트리밍 채팅, 한국어 i18n 용이 |
+| 백엔드 | FastAPI (Python) | 수집 파이프라인과 동일 언어, 비동기 스트리밍 |
+| LLM | Claude Sonnet (API) | 한국어 성능, 인용 준수, 합리적 비용 |
+| DB | Postgres + pgvector (Supabase 또는 RDS) | 메타데이터·벡터·키워드 검색 통합 |
+| 수집 | Python 크론 (MVP는 GitHub Actions 스케줄) | 무료, 저장소 내 버전 관리 |
+| 평가 | 실제 질문 ~100개, 인용 정확도 채점 | 잘못된 조문 인용을 사용자보다 먼저 발견 |
 
-## 7. Roadmap
+## 7. 로드맵
 
-| Phase | Scope | Exit criterion |
+| 단계 | 범위 | 완료 기준 |
 |---|---|---|
-| 0 (1–2 wk) | law.go.kr API key, ingest 5 statutes, CLI RAG prototype | Correct article citations on 20 test questions |
-| 1 (2–4 wk) | Full pipeline, 30 statutes, web chat UI, guardrails + disclosures | Public-demoable free MVP |
-| 2 | Precedents (판례) + legal interpretations, conversation memory, eval harness | Citation accuracy ≥95% on eval set |
-| 3 | Accounts, feedback loop, template/form helper (permitted automation category), monetization review pending LegalTech Act | — |
+| 0 (1–2주) | law.go.kr API 키, 법령 5개 수집, CLI RAG 프로토타입 | 테스트 질문 20개에서 정확한 조문 인용 |
+| 1 (2–4주) | 전체 파이프라인, 법령 30개, 웹 채팅 UI, 가드레일 + 고지 | 공개 시연 가능한 무료 MVP |
+| 2 | 판례 + 법령해석례, 대화 맥락 유지, 평가 체계 | 평가셋 인용 정확도 95% 이상 |
+| 3 | 계정, 피드백 루프, 서식 도우미(허용되는 자동화 범주), 리걸테크 진흥법에 따른 수익화 검토 | — |
 
-## 8. Key risks
+## 8. 주요 리스크
 
-Hallucinated or outdated citations are the product-killing failure — mitigated by article-level retrieval, "answer only from retrieved text" prompting, showing source text verbatim, and the ingestion sync keyed to effective dates. Regulatory risk is managed by staying free, information-only, and clearly labeled while the LegalTech Promotion Act is pending. Claude API cost is controlled by caching frequent questions and using Haiku for the query-rewrite/classifier steps.
+잘못되었거나 오래된 조문 인용이 서비스를 무너뜨리는 치명적 실패입니다. 조문 단위 검색, "검색된 조문만 근거로 답변" 프롬프트, 출처 원문 그대로 표시, 시행일자 기준 수집 동기화로 완화합니다. 규제 리스크는 리걸테크 진흥법 입법 전까지 무료·정보 제공·명확한 표시 원칙을 유지하여 관리합니다. Claude API 비용은 자주 묻는 질문 캐싱과 검색어 변환·분류 단계에 Haiku를 사용하여 통제합니다.
 
-## 9. Repo structure (proposed)
+## 9. 저장소 구조
 
 ```
 Legal-AI/
-├── ingest/        # law.go.kr fetch + parse + embed
-├── backend/       # FastAPI app, RAG pipeline, prompts/
-├── frontend/      # Next.js chat UI
-├── evals/         # test questions + grading script
-└── docs/          # this plan, data source notes
+├── ingest/        # law.go.kr 수집 + 파싱 + 임베딩
+├── backend/       # FastAPI 앱, RAG 파이프라인, 프롬프트
+├── frontend/      # Next.js 채팅 UI
+├── evals/         # 테스트 질문 + 채점 스크립트
+└── docs/          # 본 설계서, 데이터 출처 정리
 ```
