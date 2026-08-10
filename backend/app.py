@@ -12,9 +12,23 @@ is demoable before keys are configured.
 """
 
 import json
+import logging
 import os
 import sys
+import time
 from pathlib import Path
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
+logger = logging.getLogger("legal_ai")
+
+# Optional crash reporting: set SENTRY_DSN to enable. PII is never sent.
+if os.environ.get("SENTRY_DSN"):
+    try:
+        import sentry_sdk
+
+        sentry_sdk.init(dsn=os.environ["SENTRY_DSN"], traces_sample_rate=0.1, send_default_pii=False)
+    except ImportError:
+        logger.warning("SENTRY_DSN set but sentry-sdk not installed")
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -100,7 +114,11 @@ def stream_claude(question: str, articles: list[dict], api_key: str | None = Non
 
     # Priority: server env var > per-request user key. The user key is used for
     # this request only and never stored or logged.
-    client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY") or api_key)
+    client = anthropic.Anthropic(
+        api_key=os.environ.get("ANTHROPIC_API_KEY") or api_key,
+        timeout=60.0,  # fail with a friendly error instead of hanging the stream
+        max_retries=1,
+    )
     prompt = build_user_prompt(question, articles)
     extra = option_instructions(lang, simple)
     if extra:
@@ -120,13 +138,19 @@ def chat(req: ChatRequest, x_anthropic_key: str | None = Header(default=None)):
     api_key = (x_anthropic_key or "").strip() or None
 
     def generate():
+        # Latency metrics: logged without question content, and returned in the
+        # `done` event so the client can also report them.
+        t0 = time.monotonic()
+        ttft_ms: int | None = None
+
         if any(p in question for p in CRISIS_PATTERNS):
             yield sse("delta", {"text": CRISIS_MESSAGE + "\n"})
 
         if any(p in question for p in OUT_OF_SCOPE_PATTERNS):
             yield sse("sources", [])
             yield sse("delta", {"text": OUT_OF_SCOPE_MESSAGE})
-            yield sse("done", {})
+            yield sse("done", {"ttft_ms": 0, "total_ms": int((time.monotonic() - t0) * 1000)})
+            logger.info("chat route=out_of_scope total_ms=%d", (time.monotonic() - t0) * 1000)
             return
 
         articles = retriever.search(question, k=5)
@@ -136,14 +160,19 @@ def chat(req: ChatRequest, x_anthropic_key: str | None = Header(default=None)):
         ])
 
         full_answer = ""
-        if os.environ.get("ANTHROPIC_API_KEY") or api_key:
+        generated = bool(os.environ.get("ANTHROPIC_API_KEY") or api_key)
+        if generated:
             try:
                 for text in stream_claude(question, articles, api_key, req.lang, req.simple):
+                    if ttft_ms is None:
+                        ttft_ms = int((time.monotonic() - t0) * 1000)
                     full_answer += text
                     yield sse("delta", {"text": text})
-            except Exception:
+            except Exception as e:
+                logger.warning("chat generation_error=%s", type(e).__name__)
                 yield sse("delta", {"text": "답변 생성 중 오류가 발생했습니다. API 키가 올바른지 확인해 주세요."})
         else:
+            ttft_ms = int((time.monotonic() - t0) * 1000)
             yield sse("delta", {"text": fallback_answer(articles)})
 
         if full_answer:
@@ -152,7 +181,13 @@ def chat(req: ChatRequest, x_anthropic_key: str | None = Header(default=None)):
             if not result["ok"]:
                 warn = ", ".join(result["unknown"])
                 yield sse("delta", {"text": f"\n\n⚠️ 다음 인용은 검색된 근거에서 확인되지 않았습니다. 원문을 직접 확인해 주세요: {warn}"})
-        yield sse("done", {})
+
+        total_ms = int((time.monotonic() - t0) * 1000)
+        yield sse("done", {"ttft_ms": ttft_ms, "total_ms": total_ms})
+        logger.info(
+            "chat route=rag generated=%s sources=%d ttft_ms=%s total_ms=%d",
+            generated, len(articles), ttft_ms, total_ms,
+        )
 
     return StreamingResponse(generate(), media_type="text/event-stream")
 
@@ -232,6 +267,23 @@ def template(name: str):
 
 PROCEDURE = json.loads((ROOT / "data" / "procedure.json").read_text(encoding="utf-8"))
 DEADLINES = json.loads((ROOT / "data" / "deadlines.json").read_text(encoding="utf-8"))
+
+
+class ClientError(BaseModel):
+    message: str
+    stack: str | None = None
+    url: str | None = None
+
+
+@app.post("/api/client-error")
+def client_error(err: ClientError):
+    """Frontend crash reports (no user content). Grep logs for client_error to
+    compute the crash-free session metric."""
+    logger.warning(
+        "client_error message=%r url=%r stack=%r",
+        err.message[:300], (err.url or "")[:200], (err.stack or "")[:500],
+    )
+    return {"ok": True}
 
 
 @app.get("/api/procedure")

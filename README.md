@@ -40,9 +40,13 @@ http://localhost:3000 을 열어 주세요. `ANTHROPIC_API_KEY`가 없으면 검
 
 ```bash
 python cli.py "전세 보증금을 못 돌려받고 있어요"
-python evals/run_evals.py
-python -m pytest backend/test_app.py -q
+python -m pytest backend/ -q          # 백엔드 테스트
+python evals/run_evals.py             # 검색 정확도 (실패 시 exit 1)
+cd frontend && npm test               # 프론트 단위 테스트
+cd frontend && npm run e2e            # E2E (Playwright)
 ```
+
+품질 지표와 측정 방법은 [docs/stability.md](docs/stability.md)에 정리되어 있습니다. 모든 PR은 CI에서 백엔드 테스트·검색 평가·타입 검사·빌드·E2E를 통과해야 합니다.
 
 ## 실제 법령 수집
 

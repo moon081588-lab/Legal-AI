@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { memo, useRef, useState } from "react";
+import { SSEDecoder, type SSEEvent } from "./lib/sse";
 
 type Source = {
   law_name: string;
@@ -35,6 +36,39 @@ const LANGS = [
 function quickExit() {
   window.location.replace("https://weather.naver.com");
 }
+
+/** Memoized so streaming updates to the last message don't re-render history. */
+const MessageView = memo(function MessageView({ m }: { m: Message }) {
+  if (m.role === "user") return <div className="msg user">{m.text}</div>;
+  return (
+    <div style={{ display: "contents" }}>
+      <div className="msg bot">
+        {m.text || "…"}
+        {m.verified && (
+          <div className={m.verified.ok ? "verify ok" : "verify warn"}>
+            {m.verified.ok
+              ? "✓ 인용 검증됨 — 모든 인용이 검색된 근거와 일치합니다"
+              : "⚠️ 일부 인용을 근거에서 확인하지 못했습니다"}
+          </div>
+        )}
+      </div>
+      {m.sources.length > 0 && (
+        <details className="sources">
+          <summary>근거 조문 {m.sources.length}건 보기</summary>
+          {m.sources.map((s, j) => (
+            <div key={j} className="source-item">
+              <div className="name">
+                {s.law_name} {s.article_no}{s.article_title ? ` (${s.article_title})` : ""}
+              </div>
+              <div className="text">{s.text}</div>
+              {s.source_url && <a href={s.source_url} target="_blank" rel="noreferrer">법령 원문 보기 →</a>}
+            </div>
+          ))}
+        </details>
+      )}
+    </div>
+  );
+});
 
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -129,8 +163,53 @@ export default function Home() {
   }
 
   // ---- chat ----
+  const abortRef = useRef<AbortController | null>(null);
+  const pendingRef = useRef("");
+  const rafRef = useRef(0);
+
+  /** Flush buffered delta text at most once per animation frame (perf: avoids
+   *  one React re-render per SSE chunk). */
+  function scheduleFlush() {
+    if (rafRef.current) return;
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = 0;
+      flushPending();
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    });
+  }
+
+  function flushPending() {
+    const text = pendingRef.current;
+    if (!text) return;
+    pendingRef.current = "";
+    setMessages((m) => {
+      const last = m[m.length - 1];
+      if (last?.role !== "bot") return m;
+      return [...m.slice(0, -1), { ...last, text: last.text + text }];
+    });
+  }
+
+  function applyEvent(ev: SSEEvent) {
+    if (ev.event === "delta") {
+      pendingRef.current += JSON.parse(ev.data).text;
+      scheduleFlush();
+      return;
+    }
+    flushPending(); // keep ordering for non-delta events
+    setMessages((m) => {
+      const last = m[m.length - 1];
+      if (last?.role !== "bot") return m;
+      if (ev.event === "sources") return [...m.slice(0, -1), { ...last, sources: JSON.parse(ev.data) }];
+      if (ev.event === "verified") return [...m.slice(0, -1), { ...last, verified: JSON.parse(ev.data) }];
+      return m;
+    });
+  }
+
   async function ask(question: string) {
     if (!question.trim() || busy) return;
+    abortRef.current?.abort(); // a new question cancels any running stream
+    const controller = new AbortController();
+    abortRef.current = controller;
     setBusy(true);
     setInput("");
     setMessages((m) => [...m, { role: "user", text: question }, { role: "bot", text: "", sources: [] }]);
@@ -142,43 +221,25 @@ export default function Home() {
         method: "POST",
         headers,
         body: JSON.stringify({ question, lang, simple }),
+        signal: controller.signal,
       });
       const reader = res.body!.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
+      const decoder = new SSEDecoder();
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const blocks = buffer.split("\n\n");
-        buffer = blocks.pop() ?? "";
-        for (const block of blocks) {
-          let event = "", data = "";
-          for (const line of block.split("\n")) {
-            if (line.startsWith("event: ")) event = line.slice(7);
-            if (line.startsWith("data: ")) data = line.slice(6);
-          }
-          if (!event) continue;
-          setMessages((m) => {
-            const copy = [...m];
-            const last = copy[copy.length - 1];
-            if (last.role !== "bot") return m;
-            if (event === "sources") copy[copy.length - 1] = { ...last, sources: JSON.parse(data) };
-            if (event === "delta") copy[copy.length - 1] = { ...last, text: last.text + JSON.parse(data).text };
-            if (event === "verified") copy[copy.length - 1] = { ...last, verified: JSON.parse(data) };
-            return copy;
-          });
-        }
-        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+        for (const ev of decoder.feed(value)) applyEvent(ev);
       }
-    } catch {
+      for (const ev of decoder.end()) applyEvent(ev);
+      flushPending();
+    } catch (e) {
+      if ((e as Error).name === "AbortError") return;
       setMessages((m) => {
-        const copy = [...m];
-        const last = copy[copy.length - 1];
-        if (last.role === "bot" && !last.text)
-          copy[copy.length - 1] = { ...last, text: "서버에 연결할 수 없습니다. 백엔드가 실행 중인지 확인해 주세요." };
-        return copy;
+        const last = m[m.length - 1];
+        if (last?.role === "bot" && !last.text)
+          return [...m.slice(0, -1), { ...last, text: "서버에 연결할 수 없습니다. 백엔드가 실행 중인지 확인해 주세요." }];
+        return m;
       });
     } finally {
       setBusy(false);
@@ -321,36 +382,7 @@ export default function Home() {
       )}
 
       <div className="messages">
-        {messages.map((m, i) =>
-          m.role === "user" ? (
-            <div key={i} className="msg user">{m.text}</div>
-          ) : (
-            <div key={i} style={{ display: "contents" }}>
-              <div className="msg bot">
-                {m.text || "…"}
-                {m.verified && (
-                  <div className={m.verified.ok ? "verify ok" : "verify warn"}>
-                    {m.verified.ok ? "✓ 인용 검증됨 — 모든 인용이 검색된 근거와 일치합니다" : "⚠️ 일부 인용을 근거에서 확인하지 못했습니다"}
-                  </div>
-                )}
-              </div>
-              {m.sources.length > 0 && (
-                <details className="sources">
-                  <summary>근거 조문 {m.sources.length}건 보기</summary>
-                  {m.sources.map((s, j) => (
-                    <div key={j} className="source-item">
-                      <div className="name">
-                        {s.law_name} {s.article_no}{s.article_title ? ` (${s.article_title})` : ""}
-                      </div>
-                      <div className="text">{s.text}</div>
-                      {s.source_url && <a href={s.source_url} target="_blank" rel="noreferrer">법령 원문 보기 →</a>}
-                    </div>
-                  ))}
-                </details>
-              )}
-            </div>
-          )
-        )}
+        {messages.map((m, i) => <MessageView key={i} m={m} />)}
         <div ref={bottomRef} />
       </div>
 

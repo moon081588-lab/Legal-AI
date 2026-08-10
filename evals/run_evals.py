@@ -33,6 +33,8 @@ def main() -> None:
             got = [r["law_name"] + " " + r["article_no"] for r in results]
             print(f"       got: {got}")
     print(f"\nRecall@5: {hits}/{len(scored)}")
+    if hits < len(scored):
+        sys.exit(1)  # CI gate: any retrieval regression fails the build
 
 
 if __name__ == "__main__":

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "schedule": ["before 6am on monday"],
+  "prConcurrentLimit": 3,
+  "packageRules": [
+    {
+      "description": "패치 업데이트는 자동 병합 (CI 통과 시)",
+      "matchUpdateTypes": ["patch"],
+      "automerge": true
+    },
+    {
+      "description": "메이저 업데이트는 사람이 검토",
+      "matchUpdateTypes": ["major"],
+      "labels": ["needs-review"]
+    }
+  ]
+}
