@@ -24,7 +24,7 @@ from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from fastapi.responses import StreamingResponse  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
-from rag.answer import SYSTEM_PROMPT, build_user_prompt  # noqa: E402
+from rag.answer import SYSTEM_PROMPT, build_user_prompt, option_instructions  # noqa: E402
 from rag.retrieve import Retriever  # noqa: E402
 from rag.verify import verify_citations  # noqa: E402
 
@@ -70,6 +70,12 @@ retriever = Retriever()
 
 class ChatRequest(BaseModel):
     question: str
+    lang: str = "ko"
+    simple: bool = False
+
+
+class SummaryRequest(BaseModel):
+    messages: list[dict]  # [{role: "user"|"bot", text: "..."}]
 
 
 def sse(event: str, data) -> str:
@@ -88,17 +94,22 @@ def fallback_answer(articles: list[dict]) -> str:
     return "\n".join(parts)
 
 
-def stream_claude(question: str, articles: list[dict], api_key: str | None = None):
+def stream_claude(question: str, articles: list[dict], api_key: str | None = None,
+                  lang: str = "ko", simple: bool = False):
     import anthropic
 
     # Priority: server env var > per-request user key. The user key is used for
     # this request only and never stored or logged.
     client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY") or api_key)
+    prompt = build_user_prompt(question, articles)
+    extra = option_instructions(lang, simple)
+    if extra:
+        prompt = extra + "\n\n" + prompt
     with client.messages.stream(
         model=os.environ.get("LEGAL_AI_MODEL", "claude-sonnet-4-5"),
         max_tokens=1500,
         system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": build_user_prompt(question, articles)}],
+        messages=[{"role": "user", "content": prompt}],
     ) as stream:
         yield from stream.text_stream
 
@@ -127,7 +138,7 @@ def chat(req: ChatRequest, x_anthropic_key: str | None = Header(default=None)):
         full_answer = ""
         if os.environ.get("ANTHROPIC_API_KEY") or api_key:
             try:
-                for text in stream_claude(question, articles, api_key):
+                for text in stream_claude(question, articles, api_key, req.lang, req.simple):
                     full_answer += text
                     yield sse("delta", {"text": text})
             except Exception:
@@ -144,6 +155,55 @@ def chat(req: ChatRequest, x_anthropic_key: str | None = Header(default=None)):
         yield sse("done", {})
 
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+
+SUMMARY_PROMPT = """다음 대화에서 사용자(피해자)가 말한 내용을 바탕으로, 변호사·법률구조공단 상담에 가져갈 '상담 준비 요약서'를 한국어 존댓말로 작성해 주세요.
+
+형식:
+# 상담 준비 요약서
+## 1. 사건 개요 (2~3문장)
+## 2. 시간순 경위
+## 3. 확보한 증거 / 확보 예정 증거
+## 4. 상담에서 확인하고 싶은 점
+## 5. 관련될 수 있는 법령·판례 (대화에 등장한 것만)
+
+원칙: 사용자가 말한 사실만 정리하고, 새로운 법적 판단이나 조언을 추가하지 마세요. 알 수 없는 항목은 "(직접 기재해 주세요)"로 남겨 주세요. 마지막에 "※ 본 요약서는 이용자 진술을 정리한 것으로 법률 자문이 아닙니다."를 붙여 주세요."""
+
+
+def summary_fallback(messages: list[dict]) -> str:
+    """No-API-key mode: organize the user's own statements into the template."""
+    user_lines = [m["text"] for m in messages if m.get("role") == "user"]
+    stated = "\n".join(f"- {t}" for t in user_lines) or "- (직접 기재해 주세요)"
+    return (
+        "# 상담 준비 요약서\n\n"
+        "## 1. 사건 개요\n(직접 기재해 주세요)\n\n"
+        "## 2. 시간순 경위 — 이 대화에서 말씀하신 내용\n" + stated + "\n\n"
+        "## 3. 확보한 증거 / 확보 예정 증거\n- (직접 기재해 주세요)\n\n"
+        "## 4. 상담에서 확인하고 싶은 점\n- (직접 기재해 주세요)\n\n"
+        "※ 본 요약서는 이용자 진술을 정리한 것으로 법률 자문이 아닙니다.\n"
+    )
+
+
+@app.post("/api/summary")
+def summary(req: SummaryRequest, x_anthropic_key: str | None = Header(default=None)):
+    api_key = os.environ.get("ANTHROPIC_API_KEY") or (x_anthropic_key or "").strip() or None
+    if not api_key:
+        return {"content": summary_fallback(req.messages), "generated": False}
+    import anthropic
+
+    transcript = "\n".join(
+        f"[{'사용자' if m.get('role') == 'user' else 'AI'}] {m.get('text', '')}" for m in req.messages
+    )
+    try:
+        msg = anthropic.Anthropic(api_key=api_key).messages.create(
+            model=os.environ.get("LEGAL_AI_MODEL", "claude-sonnet-4-5"),
+            max_tokens=1500,
+            system=SUMMARY_PROMPT,
+            messages=[{"role": "user", "content": transcript}],
+        )
+        return {"content": msg.content[0].text, "generated": True}
+    except Exception:
+        return {"content": summary_fallback(req.messages), "generated": False}
 
 
 CHECKLISTS = json.loads((ROOT / "data" / "checklists.json").read_text(encoding="utf-8"))
@@ -168,6 +228,20 @@ def template(name: str):
     if name not in safe:
         return {"error": "unknown template"}
     return {"name": safe[name], "content": (TEMPLATES_DIR / safe[name]).read_text(encoding="utf-8")}
+
+
+PROCEDURE = json.loads((ROOT / "data" / "procedure.json").read_text(encoding="utf-8"))
+DEADLINES = json.loads((ROOT / "data" / "deadlines.json").read_text(encoding="utf-8"))
+
+
+@app.get("/api/procedure")
+def procedure():
+    return PROCEDURE
+
+
+@app.get("/api/deadlines")
+def deadlines():
+    return DEADLINES
 
 
 @app.get("/api/health")

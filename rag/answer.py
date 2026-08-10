@@ -30,6 +30,21 @@ SYSTEM_PROMPT = """당신은 대한민국 법령 정보를 안내하는 AI 도�
 """
 
 
+LANG_NAMES = {"ko": "한국어", "en": "English", "vi": "tiếng Việt", "zh": "中文"}
+
+
+def option_instructions(lang: str = "ko", simple: bool = False) -> str:
+    parts = []
+    if lang != "ko" and lang in LANG_NAMES:
+        parts.append(
+            f"사용자를 위해 답변 전체를 {LANG_NAMES[lang]}로 작성해 주세요. "
+            f"법령명과 조문 번호는 한국어 원문을 병기해 주세요."
+        )
+    if simple:
+        parts.append("쉬운 말 모드: 초등학생도 이해할 수 있는 쉬운 단어와 짧은 문장으로 설명해 주세요.")
+    return "\n".join(parts)
+
+
 def build_user_prompt(question: str, articles: list[dict]) -> str:
     if not articles:
         context = "(검색된 조문 없음)"

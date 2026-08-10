@@ -1,0 +1,11 @@
+{
+  "note": "사건 발생일(또는 안 날)을 기준으로 한 일반적인 기한 안내입니다. 죄명·사안에 따라 다를 수 있으므로 반드시 전문가와 확인하세요.",
+  "rules": [
+    {"id": "sunflower", "label": "성폭력 증거 채취 (해바라기센터)", "from": "incident", "hours": 72, "urgency": "critical", "desc": "신체 증거는 가능한 한 72시간 내 채취가 중요합니다. 씻지 말고 방문하세요."},
+    {"id": "bank", "label": "사기·보이스피싱 지급정지 신청", "from": "incident", "hours": 24, "urgency": "critical", "desc": "이체 후 빠를수록 회수 가능성이 높습니다. 즉시 112 또는 해당 은행에 신청하세요."},
+    {"id": "cctv", "label": "CCTV 보존 요청", "from": "incident", "days": 30, "urgency": "high", "desc": "통상 30일 안팎이면 삭제됩니다. 서식을 활용해 즉시 보존을 요청하세요."},
+    {"id": "complaint", "label": "친고죄 고소 기한", "from": "known", "months": 6, "urgency": "high", "desc": "친고죄(모욕죄 등)는 범인을 알게 된 날부터 6개월 내 고소해야 합니다(형사소송법 제230조). 성폭력범죄는 친고죄가 아니므로 이 기한이 적용되지 않습니다."},
+    {"id": "civil", "label": "민사 손해배상 청구 소멸시효", "from": "known", "years": 3, "urgency": "normal", "desc": "손해 및 가해자를 안 날부터 3년, 불법행위가 있은 날부터 10년입니다(민법 제766조)."},
+    {"id": "statute", "label": "공소시효", "from": "incident", "urgency": "info", "desc": "죄명에 따라 다릅니다(예: 5년~25년, 일부 범죄는 배제). 정확한 기간은 상담에서 확인하세요."}
+  ]
+}

@@ -53,3 +53,21 @@ def test_out_of_scope_is_refused():
     answer = "".join(d for e, d in events if e == "delta")
     assert "변호사" in answer
     assert "132" in answer
+
+
+def test_summary_fallback_organizes_user_statements():
+    r = client.post("/api/summary", json={"messages": [
+        {"role": "user", "text": "지난주에 폭행을 당했습니다"},
+        {"role": "bot", "text": "안내드립니다..."},
+    ]})
+    data = r.json()
+    assert "상담 준비 요약서" in data["content"]
+    assert "폭행을 당했습니다" in data["content"]
+    assert "법률 자문이 아닙니다" in data["content"]
+
+
+def test_procedure_and_deadlines_endpoints():
+    stages = client.get("/api/procedure").json()["stages"]
+    assert any("이의신청" in s["title"] for s in stages)
+    rules = client.get("/api/deadlines").json()["rules"]
+    assert any(r["id"] == "cctv" and r.get("days") == 30 for r in rules)

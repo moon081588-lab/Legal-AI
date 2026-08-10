@@ -14,23 +14,38 @@ type Message =
   | { role: "user"; text: string }
   | { role: "bot"; text: string; sources: Source[]; verified?: { ok: boolean; unknown: string[] } };
 
+type ChecklistItem = { item: string; why?: string; deadline?: string };
+type Checklist = { label: string; urgent: ChecklistItem[]; items: ChecklistItem[] };
+type Stage = { id: string; title: string; desc: string; rights: string[]; tips: string };
+type DeadlineRule = {
+  id: string; label: string; from: string; hours?: number; days?: number;
+  months?: number; years?: number; urgency: string; desc: string;
+};
+
 const EXAMPLES = [
   "폭행을 당했는데 증거를 어떻게 모아야 하나요?",
   "전세 보증금을 못 돌려받고 있어요",
   "가해자와 통화한 내용을 녹음해도 되나요?",
 ];
 
-type ChecklistItem = { item: string; why?: string; deadline?: string };
-type Checklist = { label: string; urgent: ChecklistItem[]; items: ChecklistItem[] };
+const LANGS = [
+  ["ko", "한국어"], ["en", "English"], ["vi", "Tiếng Việt"], ["zh", "中文"],
+] as const;
+
+function quickExit() {
+  window.location.replace("https://weather.naver.com");
+}
 
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [lang, setLang] = useState("ko");
+  const [simple, setSimple] = useState(false);
   const [apiKey, setApiKey] = useState(() =>
     typeof window !== "undefined" ? localStorage.getItem("legal_ai_api_key") ?? "" : ""
   );
-  const [showSettings, setShowSettings] = useState(false);
+  const [panel, setPanel] = useState<"" | "settings" | "check" | "procedure" | "deadline">("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
   function saveApiKey(value: string) {
@@ -39,14 +54,16 @@ export default function Home() {
     else localStorage.removeItem("legal_ai_api_key");
   }
 
+  // ---- checklists ----
   const [checkTypes, setCheckTypes] = useState<Record<string, string>>({});
   const [checklist, setChecklist] = useState<Checklist | null>(null);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
 
-  async function loadCheckTypes() {
-    if (Object.keys(checkTypes).length) { setCheckTypes({}); setChecklist(null); return; }
+  async function openChecklists() {
+    if (panel === "check") { setPanel(""); return; }
     const r = await fetch("/api/checklists");
     setCheckTypes(await r.json());
+    setPanel("check");
   }
 
   async function loadChecklist(type: string) {
@@ -55,6 +72,63 @@ export default function Home() {
     setChecked({});
   }
 
+  // ---- procedure navigator ----
+  const [stages, setStages] = useState<Stage[]>([]);
+  const [openStage, setOpenStage] = useState("");
+
+  async function openProcedure() {
+    if (panel === "procedure") { setPanel(""); return; }
+    const r = await fetch("/api/procedure");
+    const data = await r.json();
+    setStages(data.stages);
+    setPanel("procedure");
+  }
+
+  // ---- deadline engine ----
+  const [rules, setRules] = useState<DeadlineRule[]>([]);
+  const [incidentDate, setIncidentDate] = useState("");
+
+  async function openDeadlines() {
+    if (panel === "deadline") { setPanel(""); return; }
+    const r = await fetch("/api/deadlines");
+    const data = await r.json();
+    setRules(data.rules);
+    setPanel("deadline");
+  }
+
+  function deadlineFor(rule: DeadlineRule): { text: string; passed: boolean } | null {
+    if (!incidentDate) return null;
+    const base = new Date(incidentDate + "T00:00:00");
+    const d = new Date(base);
+    if (rule.hours) d.setHours(d.getHours() + rule.hours);
+    else if (rule.days) d.setDate(d.getDate() + rule.days);
+    else if (rule.months) d.setMonth(d.getMonth() + rule.months);
+    else if (rule.years) d.setFullYear(d.getFullYear() + rule.years);
+    else return { text: "죄명에 따라 상이", passed: false };
+    const passed = d.getTime() < Date.now();
+    return { text: d.toLocaleDateString("ko-KR"), passed };
+  }
+
+  // ---- summary ----
+  async function downloadSummary() {
+    if (!messages.length || busy) return;
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (apiKey.trim()) headers["X-Anthropic-Key"] = apiKey.trim();
+    const r = await fetch("/api/summary", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ messages: messages.map((m) => ({ role: m.role, text: m.text })) }),
+    });
+    const data = await r.json();
+    const blob = new Blob([data.content], { type: "text/markdown;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "상담준비요약서.md";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  // ---- chat ----
   async function ask(question: string) {
     if (!question.trim() || busy) return;
     setBusy(true);
@@ -67,7 +141,7 @@ export default function Home() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers,
-        body: JSON.stringify({ question }),
+        body: JSON.stringify({ question, lang, simple }),
       });
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
@@ -113,35 +187,46 @@ export default function Home() {
 
   return (
     <div className="container">
+      <button className="quick-exit" onClick={quickExit} title="이 페이지를 즉시 벗어납니다">
+        ✕ 빠른 나가기
+      </button>
+
       <div className="header">
         <div className="header-row">
           <h1>⚖️ Legal-AI — 생활법령 AI 도우미</h1>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button className="settings-btn" onClick={loadCheckTypes}>📋 증거 체크리스트</button>
-            <button className="settings-btn" onClick={() => setShowSettings(!showSettings)}>
-              {apiKey ? "🔑 키 설정됨" : "⚙️ API 키 설정"}
-            </button>
-          </div>
         </div>
-        {showSettings && (
+        <div className="toolbar">
+          <button className="settings-btn" onClick={openChecklists}>📋 증거 체크리스트</button>
+          <button className="settings-btn" onClick={openProcedure}>🧭 절차 안내</button>
+          <button className="settings-btn" onClick={openDeadlines}>⏰ 기한 계산</button>
+          <a className="settings-btn" href="/journal">📔 증거 일지</a>
+          {messages.length > 0 && (
+            <button className="settings-btn" onClick={downloadSummary}>📄 상담 준비 요약서</button>
+          )}
+          <select className="settings-btn" value={lang} onChange={(e) => setLang(e.target.value)}>
+            {LANGS.map(([code, label]) => <option key={code} value={code}>{label}</option>)}
+          </select>
+          <button className={`settings-btn ${simple ? "on" : ""}`} onClick={() => setSimple(!simple)}>
+            {simple ? "✓ 쉬운 말" : "쉬운 말"}
+          </button>
+          <button className="settings-btn" onClick={() => setPanel(panel === "settings" ? "" : "settings")}>
+            {apiKey ? "🔑 키 설정됨" : "⚙️ API 키"}
+          </button>
+        </div>
+
+        {panel === "settings" && (
           <div className="settings">
             <label>Anthropic API 키 (브라우저에만 저장되며 답변 생성에만 사용됩니다)</label>
-            <input
-              type="password"
-              value={apiKey}
-              onChange={(e) => saveApiKey(e.target.value)}
-              placeholder="sk-ant-..."
-            />
+            <input type="password" value={apiKey} onChange={(e) => saveApiKey(e.target.value)} placeholder="sk-ant-..." />
             <p>
               키가 없으면 관련 조문 원문만 표시됩니다. 키는{" "}
-              <a href="https://console.anthropic.com" target="_blank" rel="noreferrer">
-                console.anthropic.com
-              </a>
+              <a href="https://console.anthropic.com" target="_blank" rel="noreferrer">console.anthropic.com</a>
               에서 발급받을 수 있습니다.
             </p>
           </div>
         )}
-        {Object.keys(checkTypes).length > 0 && (
+
+        {panel === "check" && (
           <div className="checklist-panel">
             <div className="check-tabs">
               {Object.entries(checkTypes).map(([k, label]) => (
@@ -156,10 +241,7 @@ export default function Home() {
                   <label key={`u${i}`} className="check-item urgent">
                     <input type="checkbox" checked={!!checked[`u${i}`]}
                       onChange={() => setChecked({ ...checked, [`u${i}`]: !checked[`u${i}`] })} />
-                    <span>
-                      <b>🚨 {it.item}</b> — {it.deadline}
-                      {it.why && <em>{it.why}</em>}
-                    </span>
+                    <span><b>🚨 {it.item}</b> — {it.deadline}{it.why && <em>{it.why}</em>}</span>
                   </label>
                 ))}
                 {checklist.items.map((it, i) => (
@@ -178,17 +260,63 @@ export default function Home() {
             )}
           </div>
         )}
+
+        {panel === "procedure" && (
+          <div className="checklist-panel">
+            <p className="panel-note">2026. 10. 2. 시행 개정 형사소송법 기준 · 단계를 눌러 자세히 보세요</p>
+            {stages.map((s) => (
+              <div key={s.id} className="stage">
+                <button className="stage-title" onClick={() => setOpenStage(openStage === s.id ? "" : s.id)}>
+                  {s.title} {openStage === s.id ? "▾" : "▸"}
+                </button>
+                {openStage === s.id && (
+                  <div className="stage-body">
+                    <p>{s.desc}</p>
+                    <p><b>이 단계에서의 권리:</b> {s.rights.join(" · ")}</p>
+                    <p className="tip">💡 {s.tips}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {panel === "deadline" && (
+          <div className="checklist-panel">
+            <p className="panel-note">
+              사건 발생일(또는 알게 된 날)을 선택하면 주요 기한을 계산해 드립니다. 죄명·사안에 따라 다를 수
+              있으니 반드시 전문가와 확인하세요.
+            </p>
+            <input type="date" className="date-input" value={incidentDate} onChange={(e) => setIncidentDate(e.target.value)} />
+            {incidentDate && (
+              <div className="check-body">
+                {rules.map((r) => {
+                  const d = deadlineFor(r);
+                  return (
+                    <div key={r.id} className={`deadline-item ${r.urgency} ${d?.passed ? "passed" : ""}`}>
+                      <b>{r.label}</b>
+                      <span className="deadline-date">
+                        {d?.text}{d?.passed && " — 기한 경과 가능성"}
+                      </span>
+                      <em>{r.desc}</em>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="notice">
           AI가 생성하는 <b>일반 법령 정보</b>입니다. 법률 자문이 아니며, 구체적인 사안은 변호사 또는
-          대한법률구조공단(국번없이 132) 상담을 이용하세요.
+          대한법률구조공단(국번없이 132) 상담을 이용하세요. 대화 내용은 서버에 저장되지 않으며, 우측 상단
+          '빠른 나가기'로 언제든 즉시 화면을 벗어날 수 있습니다.
         </div>
       </div>
 
       {messages.length === 0 && (
         <div className="examples">
-          {EXAMPLES.map((q) => (
-            <button key={q} onClick={() => ask(q)}>{q}</button>
-          ))}
+          {EXAMPLES.map((q) => <button key={q} onClick={() => ask(q)}>{q}</button>)}
         </div>
       )}
 
@@ -212,13 +340,10 @@ export default function Home() {
                   {m.sources.map((s, j) => (
                     <div key={j} className="source-item">
                       <div className="name">
-                        {s.law_name} {s.article_no}
-                        {s.article_title ? ` (${s.article_title})` : ""}
+                        {s.law_name} {s.article_no}{s.article_title ? ` (${s.article_title})` : ""}
                       </div>
                       <div className="text">{s.text}</div>
-                      {s.source_url && (
-                        <a href={s.source_url} target="_blank" rel="noreferrer">법령 원문 보기 →</a>
-                      )}
+                      {s.source_url && <a href={s.source_url} target="_blank" rel="noreferrer">법령 원문 보기 →</a>}
                     </div>
                   ))}
                 </details>
