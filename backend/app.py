@@ -19,7 +19,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from fastapi import FastAPI  # noqa: E402
+from fastapi import FastAPI, Header  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from fastapi.responses import StreamingResponse  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
@@ -74,10 +74,12 @@ def fallback_answer(articles: list[dict]) -> str:
     return "\n".join(parts)
 
 
-def stream_claude(question: str, articles: list[dict]):
+def stream_claude(question: str, articles: list[dict], api_key: str | None = None):
     import anthropic
 
-    client = anthropic.Anthropic()
+    # Priority: server env var > per-request user key. The user key is used for
+    # this request only and never stored or logged.
+    client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY") or api_key)
     with client.messages.stream(
         model=os.environ.get("LEGAL_AI_MODEL", "claude-sonnet-4-5"),
         max_tokens=1500,
@@ -88,8 +90,9 @@ def stream_claude(question: str, articles: list[dict]):
 
 
 @app.post("/api/chat")
-def chat(req: ChatRequest):
+def chat(req: ChatRequest, x_anthropic_key: str | None = Header(default=None)):
     question = req.question.strip()
+    api_key = (x_anthropic_key or "").strip() or None
 
     def generate():
         if any(p in question for p in OUT_OF_SCOPE_PATTERNS):
@@ -104,9 +107,12 @@ def chat(req: ChatRequest):
             for a in articles
         ])
 
-        if os.environ.get("ANTHROPIC_API_KEY"):
-            for text in stream_claude(question, articles):
-                yield sse("delta", {"text": text})
+        if os.environ.get("ANTHROPIC_API_KEY") or api_key:
+            try:
+                for text in stream_claude(question, articles, api_key):
+                    yield sse("delta", {"text": text})
+            except Exception:
+                yield sse("delta", {"text": "답변 생성 중 오류가 발생했습니다. API 키가 올바른지 확인해 주세요."})
         else:
             yield sse("delta", {"text": fallback_answer(articles)})
         yield sse("done", {})

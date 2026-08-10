@@ -24,7 +24,17 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [apiKey, setApiKey] = useState(() =>
+    typeof window !== "undefined" ? localStorage.getItem("legal_ai_api_key") ?? "" : ""
+  );
+  const [showSettings, setShowSettings] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  function saveApiKey(value: string) {
+    setApiKey(value);
+    if (value.trim()) localStorage.setItem("legal_ai_api_key", value.trim());
+    else localStorage.removeItem("legal_ai_api_key");
+  }
 
   async function ask(question: string) {
     if (!question.trim() || busy) return;
@@ -33,9 +43,11 @@ export default function Home() {
     setMessages((m) => [...m, { role: "user", text: question }, { role: "bot", text: "", sources: [] }]);
 
     try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (apiKey.trim()) headers["X-Anthropic-Key"] = apiKey.trim();
       const res = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ question }),
       });
       const reader = res.body!.getReader();
@@ -82,7 +94,30 @@ export default function Home() {
   return (
     <div className="container">
       <div className="header">
-        <h1>⚖️ Legal-AI — 생활법령 AI 도우미</h1>
+        <div className="header-row">
+          <h1>⚖️ Legal-AI — 생활법령 AI 도우미</h1>
+          <button className="settings-btn" onClick={() => setShowSettings(!showSettings)}>
+            {apiKey ? "🔑 키 설정됨" : "⚙️ API 키 설정"}
+          </button>
+        </div>
+        {showSettings && (
+          <div className="settings">
+            <label>Anthropic API 키 (브라우저에만 저장되며 답변 생성에만 사용됩니다)</label>
+            <input
+              type="password"
+              value={apiKey}
+              onChange={(e) => saveApiKey(e.target.value)}
+              placeholder="sk-ant-..."
+            />
+            <p>
+              키가 없으면 관련 조문 원문만 표시됩니다. 키는{" "}
+              <a href="https://console.anthropic.com" target="_blank" rel="noreferrer">
+                console.anthropic.com
+              </a>
+              에서 발급받을 수 있습니다.
+            </p>
+          </div>
+        )}
         <div className="notice">
           AI가 생성하는 <b>일반 법령 정보</b>입니다. 법률 자문이 아니며, 구체적인 사안은 변호사 또는
           대한법률구조공단(국번없이 132) 상담을 이용하세요.
