@@ -7,6 +7,7 @@ exact legal terms (전세권, 임차권 등) still match strongly.
 import json
 from pathlib import Path
 
+import numpy as np
 from rank_bm25 import BM25Okapi
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -54,7 +55,10 @@ def tokenize(text: str) -> list[str]:
 
 
 class Retriever:
+    CACHE_SIZE = 256
+
     def __init__(self, data_path: Path | None = None):
+        self._cache: dict[tuple[str, int], list[dict]] = {}
         path = data_path or (DEFAULT_DATA if DEFAULT_DATA.exists() else SAMPLE_DATA)
         if not path.exists():
             raise SystemExit("조문 데이터가 없습니다. ingest 스크립트를 실행하시거나 data/sample/을 유지해 주세요.")
@@ -77,6 +81,25 @@ class Retriever:
         self.bm25 = BM25Okapi(corpus)
 
     def search(self, query: str, k: int = 6) -> list[dict]:
+        """Top-k articles for a query. Results are cached (identical questions are
+        common), and top-k selection uses argpartition — O(n) instead of an O(n log n)
+        full sort, which matters as the corpus grows to thousands of precedents."""
+        cached = self._cache.get((query, k))
+        if cached is not None:
+            return [dict(a) for a in cached]
+
         scores = self.bm25.get_scores(tokenize(expand_query(query)))
-        ranked = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:k]
-        return [{**self.articles[i], "score": float(scores[i])} for i in ranked if scores[i] > 0]
+        if len(scores) > k:
+            top = np.argpartition(scores, -k)[-k:]
+            ranked = top[np.argsort(scores[top])[::-1]]
+        else:
+            ranked = np.argsort(scores)[::-1]
+        results = [{**self.articles[i], "score": float(scores[i])} for i in ranked if scores[i] > 0]
+
+        if len(self._cache) >= self.CACHE_SIZE:
+            self._cache.pop(next(iter(self._cache)))  # simple FIFO eviction
+        self._cache[(query, k)] = results
+        return [dict(a) for a in results]
+
+    def stats(self) -> dict:
+        return {"articles": len(self.articles), "cache_entries": len(self._cache)}

@@ -66,6 +66,28 @@ def test_summary_fallback_organizes_user_statements():
     assert "법률 자문이 아닙니다" in data["content"]
 
 
+def test_long_question_is_rejected():
+    r = client.post("/api/chat", json={"question": "가" * 3000})
+    assert r.status_code == 422
+
+
+def test_invalid_lang_is_rejected():
+    r = client.post("/api/chat", json={"question": "테스트", "lang": "xx"})
+    assert r.status_code == 422
+
+
+def test_retrieval_cache_returns_equal_results():
+    from rag.retrieve import Retriever
+
+    r = Retriever()
+    a = r.search("전세 보증금", k=5)
+    b = r.search("전세 보증금", k=5)
+    assert [x["article_no"] for x in a] == [x["article_no"] for x in b]
+    assert r.stats()["cache_entries"] >= 1
+    b[0]["text"] = "mutated"          # cache must hand out copies
+    assert r.search("전세 보증금", k=5)[0]["text"] != "mutated"
+
+
 def test_procedure_and_deadlines_endpoints():
     stages = client.get("/api/procedure").json()["stages"]
     assert any("이의신청" in s["title"] for s in stages)

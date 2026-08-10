@@ -33,10 +33,14 @@ if os.environ.get("SENTRY_DSN"):
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from fastapi import FastAPI, Header  # noqa: E402
+from collections import defaultdict  # noqa: E402
+from typing import Literal  # noqa: E402
+
+import anyio  # noqa: E402
+from fastapi import FastAPI, Header, Request  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from fastapi.responses import StreamingResponse  # noqa: E402
-from pydantic import BaseModel  # noqa: E402
+from pydantic import BaseModel, Field  # noqa: E402
 
 from rag.answer import SYSTEM_PROMPT, build_user_prompt, option_instructions  # noqa: E402
 from rag.retrieve import Retriever  # noqa: E402
@@ -82,14 +86,35 @@ app.add_middleware(
 retriever = Retriever()
 
 
+MAX_QUESTION_CHARS = 2000
+MAX_SUMMARY_MESSAGES = 100
+RATE_LIMIT_PER_MIN = int(os.environ.get("LEGAL_AI_RATE_LIMIT", "20"))
+
+
 class ChatRequest(BaseModel):
-    question: str
-    lang: str = "ko"
+    question: str = Field(min_length=1, max_length=MAX_QUESTION_CHARS)
+    lang: Literal["ko", "en", "vi", "zh"] = "ko"
     simple: bool = False
 
 
 class SummaryRequest(BaseModel):
-    messages: list[dict]  # [{role: "user"|"bot", text: "..."}]
+    messages: list[dict] = Field(max_length=MAX_SUMMARY_MESSAGES)
+
+
+# Simple in-process rate limiter: protects a single-instance deployment from
+# runaway clients. Replace with Redis if you ever run multiple workers.
+_hits: dict[str, list[float]] = defaultdict(list)
+
+
+def rate_limited(request: Request) -> bool:
+    ip = request.client.host if request.client else "unknown"
+    now = time.monotonic()
+    recent = [t for t in _hits[ip] if now - t < 60]
+    recent.append(now)
+    _hits[ip] = recent
+    if len(_hits) > 10_000:  # bound memory
+        _hits.clear()
+    return len(recent) > RATE_LIMIT_PER_MIN
 
 
 def sse(event: str, data) -> str:
@@ -132,12 +157,41 @@ def stream_claude(question: str, articles: list[dict], api_key: str | None = Non
         yield from stream.text_stream
 
 
+_SENTINEL = object()
+
+
+async def _aiter_sync(sync_gen):
+    """Consume a blocking generator without occupying an event-loop worker:
+    each next() runs in a thread, so many concurrent streams stay responsive."""
+    it = iter(sync_gen)
+
+    def _next():
+        try:
+            return next(it)
+        except StopIteration:
+            return _SENTINEL
+
+    while True:
+        item = await anyio.to_thread.run_sync(_next)
+        if item is _SENTINEL:
+            return
+        yield item
+
+
 @app.post("/api/chat")
-def chat(req: ChatRequest, x_anthropic_key: str | None = Header(default=None)):
+async def chat(req: ChatRequest, request: Request, x_anthropic_key: str | None = Header(default=None)):
     question = req.question.strip()
     api_key = (x_anthropic_key or "").strip() or None
 
-    def generate():
+    if rate_limited(request):
+        async def limited():
+            yield sse("sources", [])
+            yield sse("delta", {"text": "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요."})
+            yield sse("done", {"ttft_ms": 0, "total_ms": 0})
+        logger.info("chat route=rate_limited")
+        return StreamingResponse(limited(), media_type="text/event-stream")
+
+    async def generate():
         # Latency metrics: logged without question content, and returned in the
         # `done` event so the client can also report them.
         t0 = time.monotonic()
@@ -153,7 +207,7 @@ def chat(req: ChatRequest, x_anthropic_key: str | None = Header(default=None)):
             logger.info("chat route=out_of_scope total_ms=%d", (time.monotonic() - t0) * 1000)
             return
 
-        articles = retriever.search(question, k=5)
+        articles = await anyio.to_thread.run_sync(retriever.search, question, 5)
         yield sse("sources", [
             {k: a[k] for k in ("law_name", "article_no", "article_title", "text", "source_url")}
             for a in articles
@@ -163,7 +217,8 @@ def chat(req: ChatRequest, x_anthropic_key: str | None = Header(default=None)):
         generated = bool(os.environ.get("ANTHROPIC_API_KEY") or api_key)
         if generated:
             try:
-                for text in stream_claude(question, articles, api_key, req.lang, req.simple):
+                stream = stream_claude(question, articles, api_key, req.lang, req.simple)
+                async for text in _aiter_sync(stream):
                     if ttft_ms is None:
                         ttft_ms = int((time.monotonic() - t0) * 1000)
                     full_answer += text
@@ -300,7 +355,8 @@ def deadlines():
 def health():
     return {
         "status": "ok",
-        "articles": len(retriever.articles),
         "data": retriever.path.name,
         "generation": bool(os.environ.get("ANTHROPIC_API_KEY")),
+        "rate_limit_per_min": RATE_LIMIT_PER_MIN,
+        **retriever.stats(),
     }
