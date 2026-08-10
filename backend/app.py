@@ -32,6 +32,19 @@ DISCLAIMER = (
     "구체적인 사안은 변호사 또는 대한법률구조공단(국번없이 132) 상담을 이용하세요."
 )
 
+# Acute-crisis signals: lead with emergency resources before legal information.
+CRISIS_PATTERNS = [
+    "자살", "죽고 싶", "죽어버리", "자해", "살기 싫",
+    "지금 위험", "지금 맞고", "감금", "쫓기고 있", "살려주세요",
+]
+CRISIS_MESSAGE = (
+    "많이 힘드신 상황인 것 같습니다. 법률 정보보다 먼저, 지금 도움을 받을 수 있는 곳을 알려드립니다.\n\n"
+    "· 지금 신체적 위험에 처해 있다면: 112 (경찰, 24시간)\n"
+    "· 마음이 많이 힘들다면: 자살예방 상담전화 109 (24시간), 정신건강 위기상담 1577-0199\n"
+    "· 가정폭력·성폭력: 여성긴급전화 1366 (24시간)\n\n"
+    "혼자 견디지 않으셔도 됩니다. 이어서 관련 법령 정보도 함께 안내드립니다.\n"
+)
+
 # Attorney-at-Law Act guardrail: requests we route away from the RAG pipeline.
 OUT_OF_SCOPE_PATTERNS = [
     "이길 수", "승소할", "승산", "소송 전략", "이기는 방법",
@@ -95,6 +108,9 @@ def chat(req: ChatRequest, x_anthropic_key: str | None = Header(default=None)):
     api_key = (x_anthropic_key or "").strip() or None
 
     def generate():
+        if any(p in question for p in CRISIS_PATTERNS):
+            yield sse("delta", {"text": CRISIS_MESSAGE + "\n"})
+
         if any(p in question for p in OUT_OF_SCOPE_PATTERNS):
             yield sse("sources", [])
             yield sse("delta", {"text": OUT_OF_SCOPE_MESSAGE})

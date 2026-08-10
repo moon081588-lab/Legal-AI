@@ -37,6 +37,16 @@ def test_chat_returns_sources_and_answer():
     assert "주택임대차보호법" in sources
 
 
+def test_crisis_message_leads_response():
+    r = client.post("/api/chat", json={"question": "남편에게 지금 맞고 있어요 어떻게 하죠"})
+    events = _events(r)
+    answer = "".join(d for e, d in events if e == "delta")
+    assert "112" in answer
+    assert "1366" in answer
+    # legal information still follows
+    assert any(e == "sources" for e, _ in events)
+
+
 def test_out_of_scope_is_refused():
     r = client.post("/api/chat", json={"question": "제가 소송하면 이길 수 있을까요?"})
     events = _events(r)
