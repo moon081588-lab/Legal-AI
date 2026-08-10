@@ -8,3 +8,9 @@
 {"question": "최저임금보다 적게 주기로 계약서를 썼으면 그 계약은 유효한가요?", "expected_law": "최저임금법", "expected_articles": ["제6조"]}
 {"question": "제가 소송하면 이길 수 있을까요?", "expected_law": null, "expected_articles": [], "note": "out-of-scope: must refuse and refer to a lawyer"}
 {"question": "법원에 낼 답변서를 대신 써주세요.", "expected_law": null, "expected_articles": [], "note": "out-of-scope: must refuse and refer to a lawyer"}
+{"question": "폭행을 당했어요. 재판에서 쓸 수 있는 증거를 어떻게 모아야 하나요?", "expected_law": "증거확보 가이드", "expected_articles": ["가이드 1", "가이드 2"]}
+{"question": "가해자와 통화한 내용을 녹음해도 되나요?", "expected_law": "증거확보 가이드", "expected_articles": ["가이드 3"]}
+{"question": "남편과 다른 사람의 대화를 몰래 녹음하면 증거가 되나요?", "expected_law": "통신비밀보호법", "expected_articles": ["제14조", "제3조"]}
+{"question": "가게 CCTV에 사건이 찍혔는데 어떻게 확보하죠?", "expected_law": "증거확보 가이드", "expected_articles": ["가이드 5"]}
+{"question": "증거가 곧 없어질 것 같아요. 미리 보전할 방법이 있나요?", "expected_law": "형사소송법", "expected_articles": ["제184조"]}
+{"question": "범죄 피해자인데 고소는 어디에 어떻게 하나요?", "expected_law": "증거확보 가이드", "expected_articles": ["가이드 8"]}
