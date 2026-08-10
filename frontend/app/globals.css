@@ -37,6 +37,24 @@ body {
 .msg.user { align-self: flex-end; background: #2f6fed; color: #fff; border-bottom-right-radius: 4px; }
 .msg.bot { align-self: flex-start; background: #fff; border: 1px solid #e3e6ea; border-bottom-left-radius: 4px; }
 
+.checklist-panel { margin-top: 10px; background: #fff; border: 1px solid #e3e6ea; border-radius: 8px; padding: 12px; }
+.check-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.check-tabs button {
+  border: 1px solid #d6dae0; background: #fff; border-radius: 999px; padding: 6px 13px; font-size: 13px; cursor: pointer;
+}
+.check-tabs button.active { background: #2f6fed; color: #fff; border-color: #2f6fed; }
+.check-body { margin-top: 10px; display: flex; flex-direction: column; gap: 7px; }
+.check-item { display: flex; gap: 8px; align-items: flex-start; font-size: 13.5px; line-height: 1.5; cursor: pointer; }
+.check-item input { margin-top: 3px; }
+.check-item.urgent { background: #fff3f0; border: 1px solid #f5c9be; border-radius: 8px; padding: 8px 10px; }
+.check-item em { display: block; font-style: normal; color: #8a5a4e; font-size: 12px; }
+.template-links { margin-top: 6px; font-size: 12.5px; color: #667; }
+.template-links a { color: #2f6fed; }
+
+.verify { margin-top: 10px; padding-top: 8px; border-top: 1px dashed #e3e6ea; font-size: 12px; }
+.verify.ok { color: #1a7f37; }
+.verify.warn { color: #9a6700; }
+
 .sources { align-self: flex-start; max-width: 88%; font-size: 13px; }
 .sources summary { cursor: pointer; color: #2f6fed; font-weight: 600; padding: 2px 0; }
 .source-item { background: #fff; border: 1px solid #e3e6ea; border-radius: 8px; padding: 10px 12px; margin-top: 8px; }

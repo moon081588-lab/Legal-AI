@@ -26,6 +26,7 @@ from pydantic import BaseModel  # noqa: E402
 
 from rag.answer import SYSTEM_PROMPT, build_user_prompt  # noqa: E402
 from rag.retrieve import Retriever  # noqa: E402
+from rag.verify import verify_citations  # noqa: E402
 
 DISCLAIMER = (
     "※ 이 답변은 AI가 생성한 일반적인 법령 정보이며 법률 자문이 아닙니다. "
@@ -123,17 +124,50 @@ def chat(req: ChatRequest, x_anthropic_key: str | None = Header(default=None)):
             for a in articles
         ])
 
+        full_answer = ""
         if os.environ.get("ANTHROPIC_API_KEY") or api_key:
             try:
                 for text in stream_claude(question, articles, api_key):
+                    full_answer += text
                     yield sse("delta", {"text": text})
             except Exception:
                 yield sse("delta", {"text": "답변 생성 중 오류가 발생했습니다. API 키가 올바른지 확인해 주세요."})
         else:
             yield sse("delta", {"text": fallback_answer(articles)})
+
+        if full_answer:
+            result = verify_citations(full_answer, articles)
+            yield sse("verified", result)
+            if not result["ok"]:
+                warn = ", ".join(result["unknown"])
+                yield sse("delta", {"text": f"\n\n⚠️ 다음 인용은 검색된 근거에서 확인되지 않았습니다. 원문을 직접 확인해 주세요: {warn}"})
         yield sse("done", {})
 
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+
+CHECKLISTS = json.loads((ROOT / "data" / "checklists.json").read_text(encoding="utf-8"))
+TEMPLATES_DIR = ROOT / "templates"
+
+
+@app.get("/api/checklists")
+def checklists():
+    return {k: v["label"] for k, v in CHECKLISTS.items()}
+
+
+@app.get("/api/checklists/{crime_type}")
+def checklist(crime_type: str):
+    if crime_type not in CHECKLISTS:
+        return {"error": "unknown crime type"}
+    return CHECKLISTS[crime_type]
+
+
+@app.get("/api/templates/{name}")
+def template(name: str):
+    safe = {"cctv": "cctv_보존요청서.md", "complaint": "고소장.md"}
+    if name not in safe:
+        return {"error": "unknown template"}
+    return {"name": safe[name], "content": (TEMPLATES_DIR / safe[name]).read_text(encoding="utf-8")}
 
 
 @app.get("/api/health")
