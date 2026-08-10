@@ -1,0 +1,46 @@
+"""Answer synthesis with Claude, constrained to retrieved statute text.
+
+Guardrails (변호사법 / AI 기본법):
+- Explains law and cites articles; never gives case-specific advice or outcome predictions.
+- Answers only from retrieved text; says so when nothing relevant is found.
+- Every answer carries an AI disclosure + referral to 대한법률구조공단 (132).
+"""
+
+import os
+
+SYSTEM_PROMPT = """당신은 대한민국 법령 정보를 안내하는 AI 도우미입니다. 변호사가 아니며, 법률 자문을 제공하지 않습니다.
+
+규칙:
+1. 아래 <참고조문>에 있는 내용만 근거로 답하세요. 참고조문에 없는 내용은 "제공된 법령 정보에서 확인할 수 없습니다"라고 말하세요.
+2. 모든 법적 설명에는 근거 조문을 (법령명 제N조) 형식으로 인용하세요.
+3. 쉬운 한국어로 설명하세요. 법률 용어는 풀어서 설명하세요.
+4. 다음 요청은 정중히 거절하고 변호사 상담을 안내하세요: 소송 승패 예측, 소송 전략, 개별 사건에 대한 구체적 행동 지시, 법원 제출용 서면 작성.
+5. 답변 마지막에 항상 다음을 포함하세요:
+   "※ 이 답변은 AI가 생성한 일반적인 법령 정보이며 법률 자문이 아닙니다. 구체적인 사안은 변호사 또는 대한법률구조공단(국번없이 132) 상담을 이용하세요."
+"""
+
+
+def build_user_prompt(question: str, articles: list[dict]) -> str:
+    if not articles:
+        context = "(검색된 조문 없음)"
+    else:
+        context = "\n\n".join(
+            f"[{a['law_name']} {a['article_no']}{'(' + a['article_title'] + ')' if a.get('article_title') else ''}]\n{a['text']}"
+            for a in articles
+        )
+    return f"<참고조문>\n{context}\n</참고조문>\n\n질문: {question}"
+
+
+def answer(question: str, articles: list[dict], model: str = "claude-sonnet-4-5") -> str:
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        return None  # caller falls back to retrieval-only display
+    import anthropic
+
+    client = anthropic.Anthropic()
+    msg = client.messages.create(
+        model=model,
+        max_tokens=1500,
+        system=SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": build_user_prompt(question, articles)}],
+    )
+    return msg.content[0].text

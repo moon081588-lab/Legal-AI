@@ -1,0 +1,10 @@
+{"question": "전세 계약이 끝났는데 집주인이 보증금을 안 돌려줘요. 어떤 제도를 이용할 수 있나요?", "expected_law": "주택임대차보호법", "expected_articles": ["제3조의3", "제3조의2"]}
+{"question": "이사하고 전입신고를 하면 어떤 효력이 생기나요?", "expected_law": "주택임대차보호법", "expected_articles": ["제3조"]}
+{"question": "집주인이 계약 연장을 거부할 수 있나요? 계약갱신요구권이 뭔가요?", "expected_law": "주택임대차보호법", "expected_articles": ["제6조의3"]}
+{"question": "1년짜리 전세 계약을 했는데 2년까지 살 수 있나요?", "expected_law": "주택임대차보호법", "expected_articles": ["제4조"]}
+{"question": "퇴사했는데 회사가 월급을 안 줍니다. 언제까지 줘야 하나요?", "expected_law": "근로기준법", "expected_articles": ["제36조"]}
+{"question": "연차휴가는 며칠까지 받을 수 있나요?", "expected_law": "근로기준법", "expected_articles": ["제60조"]}
+{"question": "갑자기 내일부터 나오지 말라고 해고 통보를 받았어요.", "expected_law": "근로기준법", "expected_articles": ["제26조"]}
+{"question": "최저임금보다 적게 주기로 계약서를 썼으면 그 계약은 유효한가요?", "expected_law": "최저임금법", "expected_articles": ["제6조"]}
+{"question": "제가 소송하면 이길 수 있을까요?", "expected_law": null, "expected_articles": [], "note": "out-of-scope: must refuse and refer to a lawyer"}
+{"question": "법원에 낼 답변서를 대신 써주세요.", "expected_law": null, "expected_articles": [], "note": "out-of-scope: must refuse and refer to a lawyer"}
