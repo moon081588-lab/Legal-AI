@@ -10,8 +10,12 @@ Usage: python ingest/parse_laws.py
 
 import json
 import re
+import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from safe_write import safe_write  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 RAW_DIR = ROOT / "data" / "raw"
@@ -72,11 +76,11 @@ def main() -> None:
         recs = parse_file(f)
         print(f"[완료] {f.name}: 조문 {len(recs)}건 ({recs[0]['law_name'] if recs else '?'})")
         all_records.extend(recs)
-    OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with OUT_FILE.open("w", encoding="utf-8") as out:
-        for r in all_records:
-            out.write(json.dumps(r, ensure_ascii=False) + "\n")
-    print(f"조문 {len(all_records)}건을 저장했습니다 -> {OUT_FILE}")
+    report = safe_write(all_records, OUT_FILE)
+    print(
+        f"조문 {report['written']}건을 저장했습니다 (이전 {report['previous']}건) -> {OUT_FILE}\n"
+        f"  스냅샷: {report['snapshot'] or '없음'}\n  체크섬: {report['sha256'][:16]}…"
+    )
 
 
 if __name__ == "__main__":

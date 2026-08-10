@@ -29,7 +29,7 @@ test("procedure navigator shows 불송치 이의신청 stage", async ({ page }) 
   await expect(page.getByText("제245조의7")).toBeVisible();
 });
 
-test("journal entry persists in localStorage", async ({ page }) => {
+test("journal entry persists across reloads (IndexedDB)", async ({ page }) => {
   await page.goto("/journal");
   await page.locator('input[type="date"]').fill("2026-08-01");
   await page.getByPlaceholder(/제목/).fill("테스트 기록");
@@ -37,4 +37,24 @@ test("journal entry persists in localStorage", async ({ page }) => {
   await expect(page.getByText("테스트 기록")).toBeVisible();
   await page.reload();
   await expect(page.getByText("테스트 기록")).toBeVisible();
+});
+
+test("journal offers encrypted backup and restore", async ({ page }) => {
+  await page.goto("/journal");
+  await page.getByRole("button", { name: /백업·복원/ }).click();
+  await expect(page.getByPlaceholder(/비워 두면/)).toBeVisible();
+  await expect(page.getByRole("button", { name: /백업 파일 복원/ })).toBeVisible();
+});
+
+test("static panels still work when the API is unreachable", async ({ page, context }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /증거 체크리스트/ }).click();
+  await page.getByRole("button", { name: "폭행·상해" }).click();
+  await expect(page.getByText(/CCTV 보존 요청/)).toBeVisible(); // primed the cache
+
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: /Legal-AI/ })).toBeVisible();
+  await expect(page.getByText(/오프라인 상태입니다/)).toBeVisible();
+  await context.setOffline(false);
 });

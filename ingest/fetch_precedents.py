@@ -20,6 +20,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fetch_laws import api_get  # noqa: E402
+from safe_write import safe_write  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT_FILE = ROOT / "data" / "precedents.jsonl"
@@ -84,11 +85,11 @@ def main() -> None:
             time.sleep(0.5)
         print(f"[완료] 검색어 '{query}' 처리, 누적 판례 {len(records)}건")
 
-    OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with OUT_FILE.open("w", encoding="utf-8") as out:
-        for r in records:
-            out.write(json.dumps(r, ensure_ascii=False) + "\n")
-    print(f"판례 {len(records)}건을 저장했습니다 -> {OUT_FILE}")
+    report = safe_write(records, OUT_FILE)
+    print(
+        f"판례 {report['written']}건을 저장했습니다 (이전 {report['previous']}건) -> {OUT_FILE}\n"
+        f"  스냅샷: {report['snapshot'] or '없음'}\n  체크섬: {report['sha256'][:16]}…"
+    )
 
 
 if __name__ == "__main__":

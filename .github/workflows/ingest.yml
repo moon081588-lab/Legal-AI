@@ -17,6 +17,10 @@ jobs:
         with:
           python-version: "3.12"
 
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+
+      # 각 단계는 safe_write 가드를 통과해야만 파일을 씁니다.
+      # 검증 실패 시 기존 데이터는 그대로 유지되고 잡이 실패합니다.
       - name: 법령 수집
         env:
           LAW_GO_KR_OC: ${{ secrets.LAW_GO_KR_OC }}
@@ -29,10 +33,16 @@ jobs:
           LAW_GO_KR_OC: ${{ secrets.LAW_GO_KR_OC }}
         run: python ingest/fetch_precedents.py
 
+      - name: 무결성 검사
+        run: python ingest/rollback.py --verify
+
+      - name: 갱신된 데이터로 검색 평가 (실패 시 커밋하지 않음)
+        run: python evals/run_evals.py
+
       - name: 변경 사항 커밋
         run: |
           git config user.name "legal-ai-bot"
           git config user.email "actions@github.com"
-          git add data/articles.jsonl data/precedents.jsonl
+          git add data/articles.jsonl data/precedents.jsonl data/*.sha256 data/snapshots
           git diff --cached --quiet || git commit -m "자동 수집: 법령·판례 데이터 갱신 ($(date +%Y-%m-%d))"
           git push

@@ -34,12 +34,13 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from collections import defaultdict  # noqa: E402
+from contextlib import asynccontextmanager  # noqa: E402
 from typing import Literal  # noqa: E402
 
 import anyio  # noqa: E402
 from fastapi import FastAPI, Header, Request  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
-from fastapi.responses import StreamingResponse  # noqa: E402
+from fastapi.responses import JSONResponse, StreamingResponse  # noqa: E402
 from pydantic import BaseModel, Field  # noqa: E402
 
 from rag.answer import SYSTEM_PROMPT, build_user_prompt, option_instructions  # noqa: E402
@@ -75,7 +76,27 @@ OUT_OF_SCOPE_MESSAGE = (
     "무료 상담: 대한법률구조공단 국번없이 132 (klac.or.kr)\n\n" + DISCLAIMER
 )
 
-app = FastAPI(title="Legal-AI")
+_state = {"ready": False, "shutting_down": False, "active_streams": 0}
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    # Data loads at import time; flip readiness only once that succeeded.
+    _state["ready"] = len(retriever.articles) > 0
+    logger.info("startup ready=%s articles=%d", _state["ready"], len(retriever.articles))
+    yield
+    # Drain: stop accepting traffic, let in-flight streams finish so nobody
+    # gets an answer cut off mid-sentence.
+    _state["shutting_down"] = True
+    _state["ready"] = False
+    for _ in range(100):  # up to ~10s
+        if _state["active_streams"] <= 0:
+            break
+        await anyio.sleep(0.1)
+    logger.info("shutdown complete active_streams=%d", _state["active_streams"])
+
+
+app = FastAPI(title="Legal-AI", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
@@ -157,6 +178,51 @@ def stream_claude(question: str, articles: list[dict], api_key: str | None = Non
         yield from stream.text_stream
 
 
+class CircuitBreaker:
+    """After repeated model-API failures, stop calling it for a cooldown period
+    and serve retrieval-only answers instead. Degrade, don't break."""
+
+    def __init__(self, threshold: int = 3, cooldown_s: int = 60):
+        self.threshold = threshold
+        self.cooldown_s = cooldown_s
+        self.failures = 0
+        self.opened_at = 0.0
+
+    @property
+    def is_open(self) -> bool:
+        if self.failures < self.threshold:
+            return False
+        if time.monotonic() - self.opened_at > self.cooldown_s:
+            self.reset()  # half-open: allow one probe request through
+            return False
+        return True
+
+    def record_failure(self) -> None:
+        self.failures += 1
+        if self.failures >= self.threshold:
+            self.opened_at = time.monotonic()
+            logger.warning("circuit_breaker opened failures=%d", self.failures)
+
+    def record_success(self) -> None:
+        if self.failures:
+            logger.info("circuit_breaker closed after %d failures", self.failures)
+        self.reset()
+
+    def reset(self) -> None:
+        self.failures = 0
+        self.opened_at = 0.0
+
+    def state(self) -> str:
+        return "open" if self.is_open else ("degraded" if self.failures else "closed")
+
+
+breaker = CircuitBreaker()
+
+DEGRADED_NOTICE = (
+    "\n\n※ 현재 답변 생성 서비스에 일시적인 문제가 있어 관련 조문 원문만 안내드렸습니다. "
+    "잠시 후 다시 시도해 주세요.\n"
+)
+
 _SENTINEL = object()
 
 
@@ -196,6 +262,14 @@ async def chat(req: ChatRequest, request: Request, x_anthropic_key: str | None =
         # `done` event so the client can also report them.
         t0 = time.monotonic()
         ttft_ms: int | None = None
+        _state["active_streams"] += 1
+        try:
+            async for chunk in _generate_body(t0, ttft_ms):
+                yield chunk
+        finally:
+            _state["active_streams"] -= 1
+
+    async def _generate_body(t0: float, ttft_ms: int | None):
 
         if any(p in question for p in CRISIS_PATTERNS):
             yield sse("delta", {"text": CRISIS_MESSAGE + "\n"})
@@ -214,7 +288,8 @@ async def chat(req: ChatRequest, request: Request, x_anthropic_key: str | None =
         ])
 
         full_answer = ""
-        generated = bool(os.environ.get("ANTHROPIC_API_KEY") or api_key)
+        has_key = bool(os.environ.get("ANTHROPIC_API_KEY") or api_key)
+        generated = has_key and not breaker.is_open
         if generated:
             try:
                 stream = stream_claude(question, articles, api_key, req.lang, req.simple)
@@ -223,12 +298,20 @@ async def chat(req: ChatRequest, request: Request, x_anthropic_key: str | None =
                         ttft_ms = int((time.monotonic() - t0) * 1000)
                     full_answer += text
                     yield sse("delta", {"text": text})
+                breaker.record_success()
             except Exception as e:
+                breaker.record_failure()
                 logger.warning("chat generation_error=%s", type(e).__name__)
-                yield sse("delta", {"text": "답변 생성 중 오류가 발생했습니다. API 키가 올바른지 확인해 주세요."})
+                if not full_answer:  # nothing streamed yet — degrade to retrieval
+                    yield sse("delta", {"text": fallback_answer(articles) + DEGRADED_NOTICE})
+                else:
+                    yield sse("delta", {"text": "\n\n답변 생성이 중단되었습니다. 잠시 후 다시 시도해 주세요."})
         else:
             ttft_ms = int((time.monotonic() - t0) * 1000)
-            yield sse("delta", {"text": fallback_answer(articles)})
+            text = fallback_answer(articles)
+            if has_key and breaker.is_open:
+                text += DEGRADED_NOTICE
+            yield sse("delta", {"text": text})
 
         if full_answer:
             result = verify_citations(full_answer, articles)
@@ -240,8 +323,8 @@ async def chat(req: ChatRequest, request: Request, x_anthropic_key: str | None =
         total_ms = int((time.monotonic() - t0) * 1000)
         yield sse("done", {"ttft_ms": ttft_ms, "total_ms": total_ms})
         logger.info(
-            "chat route=rag generated=%s sources=%d ttft_ms=%s total_ms=%d",
-            generated, len(articles), ttft_ms, total_ms,
+            "chat route=rag generated=%s breaker=%s sources=%d ttft_ms=%s total_ms=%d",
+            generated, breaker.state(), len(articles), ttft_ms, total_ms,
         )
 
     return StreamingResponse(generate(), media_type="text/event-stream")
@@ -262,7 +345,11 @@ SUMMARY_PROMPT = """다음 대화에서 사용자(피해자)가 말한 내용을
 
 def summary_fallback(messages: list[dict]) -> str:
     """No-API-key mode: organize the user's own statements into the template."""
-    user_lines = [m["text"] for m in messages if m.get("role") == "user"]
+    user_lines = [
+        str(m.get("text", "")).strip()
+        for m in messages
+        if isinstance(m, dict) and m.get("role") == "user" and str(m.get("text", "")).strip()
+    ]
     stated = "\n".join(f"- {t}" for t in user_lines) or "- (직접 기재해 주세요)"
     return (
         "# 상담 준비 요약서\n\n"
@@ -282,7 +369,9 @@ def summary(req: SummaryRequest, x_anthropic_key: str | None = Header(default=No
     import anthropic
 
     transcript = "\n".join(
-        f"[{'사용자' if m.get('role') == 'user' else 'AI'}] {m.get('text', '')}" for m in req.messages
+        f"[{'사용자' if m.get('role') == 'user' else 'AI'}] {str(m.get('text', ''))}"
+        for m in req.messages
+        if isinstance(m, dict)
     )
     try:
         msg = anthropic.Anthropic(api_key=api_key).messages.create(
@@ -349,6 +438,28 @@ def procedure():
 @app.get("/api/deadlines")
 def deadlines():
     return DEADLINES
+
+
+@app.get("/api/livez")
+def livez():
+    """Liveness: is the process running? (restart if this fails)"""
+    return {"status": "alive"}
+
+
+@app.get("/api/readyz")
+def readyz():
+    """Readiness: should this instance receive traffic? (data loaded, not draining)"""
+    ready = _state["ready"] and not _state["shutting_down"]
+    return JSONResponse(
+        status_code=200 if ready else 503,
+        content={
+            "ready": ready,
+            "articles": len(retriever.articles),
+            "shutting_down": _state["shutting_down"],
+            "active_streams": _state["active_streams"],
+            "breaker": breaker.state(),
+        },
+    )
 
 
 @app.get("/api/health")

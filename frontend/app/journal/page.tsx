@@ -1,20 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
-type Entry = {
-  id: string;
-  date: string;
-  time: string;
-  title: string;
-  desc: string;
-  photos: string[]; // data URLs
-};
-
-const STORAGE_KEY = "legal_ai_journal";
+import { useEffect, useRef, useState } from "react";
+import {
+  deleteEntry,
+  exportBackup,
+  importBackup,
+  loadEntries,
+  markBackedUp,
+  saveEntry,
+  shouldPromptBackup,
+  type Entry,
+} from "../lib/journal-store";
 
 function quickExit() {
   window.location.replace("https://weather.naver.com");
+}
+
+function download(blob: Blob, filename: string) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 export default function Journal() {
@@ -24,45 +31,70 @@ export default function Journal() {
   const [title, setTitle] = useState("");
   const [desc, setDesc] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
+  const [showBackup, setShowBackup] = useState(false);
+  const [nudge, setNudge] = useState(false);
+  const [passphrase, setPassphrase] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    try {
-      setEntries(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]"));
-    } catch {
-      setEntries([]);
-    }
+    loadEntries().then((e) => {
+      setEntries(e);
+      setNudge(shouldPromptBackup(e.length));
+    });
   }, []);
 
-  function persist(next: Entry[]) {
-    setEntries(next);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      alert("저장 공간이 부족합니다. 사진 수를 줄이거나 오래된 항목을 내보낸 뒤 삭제해 주세요.");
-    }
+  async function refresh() {
+    const e = await loadEntries();
+    setEntries(e);
+    setNudge(shouldPromptBackup(e.length));
   }
 
   function addPhotos(files: FileList | null) {
     if (!files) return;
-    Array.from(files).slice(0, 3 - photos.length).forEach((f) => {
-      const reader = new FileReader();
-      reader.onload = () => setPhotos((p) => [...p, reader.result as string].slice(0, 3));
-      reader.readAsDataURL(f);
-    });
+    Array.from(files)
+      .slice(0, 3 - photos.length)
+      .forEach((f) => {
+        const reader = new FileReader();
+        reader.onload = () => setPhotos((p) => [...p, reader.result as string].slice(0, 3));
+        reader.readAsDataURL(f);
+      });
   }
 
-  function addEntry() {
+  async function addEntry() {
     if (!date || (!title.trim() && !desc.trim())) return;
-    const entry: Entry = {
+    await saveEntry({
       id: String(Date.now()),
       date, time, title: title.trim(), desc: desc.trim(), photos,
-    };
-    persist([entry, ...entries].sort((a, b) => (a.date + a.time < b.date + b.time ? 1 : -1)));
+    });
     setDate(""); setTime(""); setTitle(""); setDesc(""); setPhotos([]);
+    await refresh();
   }
 
-  function removeEntry(id: string) {
-    if (confirm("이 기록을 삭제할까요?")) persist(entries.filter((e) => e.id !== id));
+  async function removeEntry(id: string) {
+    if (!confirm("이 기록을 삭제할까요? 삭제하면 되돌릴 수 없습니다.")) return;
+    await deleteEntry(id);
+    await refresh();
+  }
+
+  async function doExportBackup() {
+    const blob = await exportBackup(entries, passphrase);
+    const suffix = passphrase ? "암호화" : "일반";
+    download(blob, `증거일지-백업-${new Date().toISOString().slice(0, 10)}-${suffix}.json`);
+    markBackedUp();
+    setNudge(false);
+    setPassphrase("");
+  }
+
+  async function doImport(file: File) {
+    try {
+      const restored = await importBackup(await file.text(), passphrase);
+      for (const e of restored) await saveEntry(e);
+      await refresh();
+      alert(`${restored.length}건을 복원했습니다.`);
+      setPassphrase("");
+    } catch (e) {
+      alert((e as Error).message);
+    }
   }
 
   function exportMarkdown() {
@@ -74,12 +106,9 @@ export default function Journal() {
       lines.push("");
     });
     lines.push("※ 본 일지는 작성자가 직접 기록한 것입니다.");
-    const blob = new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "증거일지.md";
-    a.click();
-    URL.revokeObjectURL(a.href);
+    download(new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" }), "증거일지.md");
+    markBackedUp();
+    setNudge(false);
   }
 
   return (
@@ -91,20 +120,62 @@ export default function Journal() {
       <div className="header">
         <div className="header-row">
           <h1>📔 증거 일지</h1>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <a className="settings-btn" href="/">← 채팅으로</a>
+            <button className="settings-btn" onClick={() => setShowBackup(!showBackup)}>
+              🔐 백업·복원
+            </button>
             {entries.length > 0 && (
               <>
                 <button className="settings-btn" onClick={exportMarkdown}>⬇ 내보내기(.md)</button>
-                <button className="settings-btn" onClick={() => window.print()}>🖨 인쇄(사진 포함)</button>
+                <button className="settings-btn" onClick={() => window.print()}>🖨 인쇄</button>
               </>
             )}
           </div>
         </div>
+
+        {nudge && (
+          <div className="backup-nudge">
+            기록이 쌓였습니다. 기기를 잃어버리거나 브라우저 데이터가 지워지면 복구할 수 없으니
+            지금 백업해 두시는 것을 권합니다.{" "}
+            <button onClick={() => setShowBackup(true)}>백업하기</button>
+          </div>
+        )}
+
+        {showBackup && (
+          <div className="settings">
+            <label>백업 암호 (선택) — 입력하면 백업 파일이 암호화됩니다</label>
+            <input
+              type="password"
+              value={passphrase}
+              onChange={(e) => setPassphrase(e.target.value)}
+              placeholder="비워 두면 암호화하지 않습니다"
+            />
+            <div className="row" style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button className="settings-btn" onClick={doExportBackup} disabled={!entries.length}>
+                💾 백업 파일 저장
+              </button>
+              <button className="settings-btn" onClick={() => fileRef.current?.click()}>
+                📥 백업 파일 복원
+              </button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="application/json"
+                hidden
+                onChange={(e) => e.target.files?.[0] && doImport(e.target.files[0])}
+              />
+            </div>
+            <p>
+              암호를 잊으면 복원할 수 없습니다. 백업 파일은 USB나 다른 기기 등 안전한 곳에 보관해
+              주세요.
+            </p>
+          </div>
+        )}
+
         <div className="notice">
-          일지는 <b>이 기기의 브라우저에만</b> 저장되며 서버로 전송되지 않습니다. 스토킹·협박처럼 반복되는
-          피해는 발생할 때마다 기록해 두면 패턴을 입증하는 중요한 자료가 됩니다. 날짜가 지난 뒤에도
-          기억나는 대로 기록해 두세요.
+          일지는 <b>이 기기에만</b> 저장되며 서버로 전송되지 않습니다. 스토킹·협박처럼 반복되는
+          피해는 발생할 때마다 기록해 두면 패턴을 입증하는 중요한 자료가 됩니다.
         </div>
       </div>
 
@@ -126,7 +197,8 @@ export default function Journal() {
             <input type="file" accept="image/*" multiple hidden onChange={(e) => addPhotos(e.target.files)} />
           </label>
           {photos.map((p, i) => (
-            <img key={i} src={p} alt="첨부" className="thumb" onClick={() => setPhotos(photos.filter((_, j) => j !== i))} title="누르면 제거" />
+            <img key={i} src={p} alt="첨부" className="thumb"
+              onClick={() => setPhotos(photos.filter((_, j) => j !== i))} title="누르면 제거" />
           ))}
           <button className="add-btn" onClick={addEntry} disabled={!date || (!title.trim() && !desc.trim())}>
             기록 추가

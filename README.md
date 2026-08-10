@@ -46,7 +46,9 @@ cd frontend && npm test               # 프론트 단위 테스트
 cd frontend && npm run e2e            # E2E (Playwright)
 ```
 
-품질 지표와 측정 방법은 [docs/stability.md](docs/stability.md)에 정리되어 있습니다. 모든 PR은 CI에서 백엔드 테스트·검색 평가·타입 검사·빌드·E2E를 통과해야 합니다.
+품질 지표와 측정 방법은 [docs/stability.md](docs/stability.md), 장애 대응 절차는 [docs/runbook.md](docs/runbook.md)에 있습니다. 모든 PR은 CI에서 백엔드 테스트·카오스 테스트·검색 평가·타입 검사·빌드·E2E를 통과해야 합니다.
+
+주요 내구성 장치: 수집 데이터 검증·스냅샷·롤백(`python ingest/rollback.py`), 모델 API 장애 시 조문 원문 답변으로 자동 전환, 증거 일지 IndexedDB 저장 + 암호화 백업, 오프라인(서비스 워커) 지원.
 
 ## 실제 법령 수집
 

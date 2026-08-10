@@ -1,0 +1,18 @@
+{
+  "name": "Legal-AI 생활법령 도우미",
+  "short_name": "Legal-AI",
+  "description": "대한민국 법령 정보와 증거 확보 안내 (법률 자문 아님)",
+  "lang": "ko",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f7f9",
+  "theme_color": "#2f6fed",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

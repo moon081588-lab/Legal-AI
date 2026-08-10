@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { SSEDecoder, type SSEEvent } from "./lib/sse";
 
 type Source = {
@@ -80,7 +80,19 @@ export default function Home() {
     typeof window !== "undefined" ? localStorage.getItem("legal_ai_api_key") ?? "" : ""
   );
   const [panel, setPanel] = useState<"" | "settings" | "check" | "procedure" | "deadline">("");
+  const [offline, setOffline] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const sync = () => setOffline(!navigator.onLine);
+    sync();
+    window.addEventListener("online", sync);
+    window.addEventListener("offline", sync);
+    return () => {
+      window.removeEventListener("online", sync);
+      window.removeEventListener("offline", sync);
+    };
+  }, []);
 
   function saveApiKey(value: string) {
     setApiKey(value);
@@ -385,6 +397,12 @@ export default function Home() {
         {messages.map((m, i) => <MessageView key={i} m={m} />)}
         <div ref={bottomRef} />
       </div>
+
+      {offline && (
+        <div className="offline-banner">
+          오프라인 상태입니다 · 체크리스트·절차 안내·서식·증거 일지는 계속 사용하실 수 있습니다
+        </div>
+      )}
 
       <div className="inputbar">
         <div className="inner">

@@ -3,7 +3,24 @@ import "./globals.css";
 export const metadata = {
   title: "Legal-AI — 생활법령 AI 도우미",
   description: "대한민국 법령 정보를 쉽게 안내하는 AI 서비스 (법률 자문 아님)",
+  manifest: "/manifest.webmanifest",
 };
+
+export const viewport = {
+  themeColor: "#2f6fed",
+  width: "device-width",
+  initialScale: 1,
+};
+
+// Offline support: checklists, procedure guide, deadlines and templates stay
+// available with no network.
+const swRegister = `
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("/sw.js").catch(function () {});
+  });
+}
+`;
 
 // Report uncaught frontend errors to the backend (message/stack only, never user input).
 const errorReporter = `
@@ -32,6 +49,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ko">
       <body>
         <script dangerouslySetInnerHTML={{ __html: errorReporter }} />
+        <script dangerouslySetInnerHTML={{ __html: swRegister }} />
         {children}
       </body>
     </html>
