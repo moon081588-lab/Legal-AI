@@ -13,6 +13,8 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DATA = ROOT / "data" / "articles.jsonl"
 SAMPLE_DATA = ROOT / "data" / "sample" / "articles.jsonl"
 GUIDES_DIR = ROOT / "data" / "guides"  # curated guides, always loaded alongside statutes
+PREC_DATA = ROOT / "data" / "precedents.jsonl"  # ingested precedents (real)
+PREC_SAMPLE = ROOT / "data" / "sample" / "precedents.jsonl"  # dev fixture
 
 
 # Colloquial -> statutory vocabulary. Phase 1 replaces this with an LLM query-rewrite step.
@@ -32,6 +34,9 @@ QUERY_SYNONYMS = {
     "cctv": "CCTV 영상",
     "블랙박스": "영상 CCTV",
     "증거": "증거 확보 보전",
+    "불법": "위법 적법한 절차 증거능력",
+    "인정될": "증거능력",
+    "인정되나": "증거능력",
 }
 
 
@@ -55,6 +60,11 @@ class Retriever:
             raise SystemExit("조문 데이터가 없습니다. ingest 스크립트를 실행하시거나 data/sample/을 유지해 주세요.")
         self.path = path
         self.articles = [json.loads(l) for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
+        prec_path = PREC_DATA if PREC_DATA.exists() else PREC_SAMPLE
+        if prec_path.exists():
+            self.articles += [
+                json.loads(l) for l in prec_path.read_text(encoding="utf-8").splitlines() if l.strip()
+            ]
         if GUIDES_DIR.is_dir():
             for guide_file in sorted(GUIDES_DIR.glob("*.jsonl")):
                 self.articles += [

@@ -14,3 +14,5 @@
 {"question": "가게 CCTV에 사건이 찍혔는데 어떻게 확보하죠?", "expected_law": "증거확보 가이드", "expected_articles": ["가이드 5"]}
 {"question": "증거가 곧 없어질 것 같아요. 미리 보전할 방법이 있나요?", "expected_law": "형사소송법", "expected_articles": ["제184조"]}
 {"question": "범죄 피해자인데 고소는 어디에 어떻게 하나요?", "expected_law": "증거확보 가이드", "expected_articles": ["가이드 8"]}
+{"question": "제가 몰래 녹음한 통화가 재판에서 증거로 인정될까요? 판례가 있나요?", "expected_law": "판례(대법원)", "expected_articles": ["2001도3106"]}
+{"question": "불법으로 얻은 증거는 재판에서 어떻게 되나요?", "expected_law": "판례(대법원)", "expected_articles": ["2007도3061", "2008도3990"]}
