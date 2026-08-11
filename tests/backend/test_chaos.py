@@ -1,6 +1,6 @@
 """Chaos / fault-injection tests: the app must degrade, never white-screen.
 
-    python -m pytest backend/test_chaos.py -q
+    python -m pytest tests/backend/test_chaos.py -q
 """
 
 import json
@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from fastapi.testclient import TestClient  # noqa: E402

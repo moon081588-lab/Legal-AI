@@ -1,11 +1,11 @@
-"""Backend tests: python -m pytest backend/test_app.py -q  (from repo root)"""
+"""Backend tests: python -m pytest tests/backend -q  (저장소 루트에서 실행)"""
 
 import sys
 from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from fastapi.testclient import TestClient
 

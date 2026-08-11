@@ -1,9 +1,9 @@
-"""Citation verifier tests: python -m pytest backend/test_verify.py -q"""
+"""Citation verifier tests: python -m pytest tests/backend/test_verify.py -q"""
 
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from rag.verify import verify_citations
 

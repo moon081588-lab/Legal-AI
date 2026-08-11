@@ -23,7 +23,7 @@ from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SNAPSHOT_DIR = ROOT / "data" / "snapshots"
+SNAPSHOT_DIR = ROOT / "data" / "corpus" / "snapshots"
 
 REQUIRED_FIELDS = ("law_name", "article_no", "text")
 MIN_RECORDS = 5           # below this, an ingest is assumed broken

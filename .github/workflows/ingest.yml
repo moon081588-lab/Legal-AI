@@ -43,6 +43,6 @@ jobs:
         run: |
           git config user.name "legal-ai-bot"
           git config user.email "actions@github.com"
-          git add data/articles.jsonl data/precedents.jsonl data/*.sha256 data/snapshots
+          git add data/corpus/articles.jsonl data/corpus/precedents.jsonl data/corpus/*.sha256 data/corpus/snapshots
           git diff --cached --quiet || git commit -m "자동 수집: 법령·판례 데이터 갱신 ($(date +%Y-%m-%d))"
           git push

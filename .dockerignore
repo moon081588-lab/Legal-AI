@@ -1,5 +1,5 @@
 # 런타임에 필요 없는 것만 제외합니다.
-# 주의: templates/*.md 는 /api/templates 가 실제로 서빙하므로 절대 제외하지 마세요.
+# 주의: data/content/templates/*.md 는 /api/templates 가 실제로 서빙하므로 제외 금지.
 frontend/
 docs/
 evals/
@@ -11,9 +11,7 @@ __pycache__/
 **/__pycache__/
 *.pyc
 .pytest_cache/
-data/raw/
-data/snapshots/
+data/corpus/raw/
+data/corpus/snapshots/
 node_modules/
 /*.md
-/renovate.json
-/lighthouserc.json

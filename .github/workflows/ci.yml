@@ -23,7 +23,7 @@ jobs:
       - name: 데이터 스키마 검사
         run: python scripts/validate_data.py
       - name: 백엔드 테스트
-        run: python -m pytest backend/ -q
+        run: python -m pytest tests/backend -q
       - name: 검색 평가 게이트 (Recall@5 = 100%)
         run: python evals/run_evals.py
 
@@ -120,5 +120,5 @@ jobs:
       - run: npm run build
         working-directory: frontend
       - name: Lighthouse 성능 예산
-        run: npx --yes @lhci/cli autorun --config=../lighthouserc.json
+        run: npx --yes @lhci/cli autorun --config=lighthouserc.json
         working-directory: frontend

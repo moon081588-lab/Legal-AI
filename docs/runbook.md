@@ -21,7 +21,7 @@ python ingest/rollback.py --verify   # 데이터 무결성(체크섬)
 
 ```bash
 curl -s localhost:8000/api/readyz | python -m json.tool   # articles 값 확인
-ls -l data/articles.jsonl data/sample/articles.jsonl
+ls -l data/corpus/articles.jsonl data/corpus/sample/articles.jsonl
 python ingest/rollback.py --verify
 ```
 
@@ -56,7 +56,7 @@ curl -s localhost:8000/api/health
 
 1. https://open.law.go.kr 접속 확인(점검 공지 여부).
 2. 수동 확인: `LAW_GO_KR_OC=<id> python ingest/fetch_laws.py`
-3. 응답 XML 구조가 바뀐 경우 `ingest/parse_laws.py`의 태그명을 수정하고 `python -m pytest backend/test_chaos.py -q`로 가드가 여전히 동작하는지 확인.
+3. 응답 XML 구조가 바뀐 경우 `ingest/parse_laws.py`의 태그명을 수정하고 `python -m pytest tests/backend/test_chaos.py -q`로 가드가 여전히 동작하는지 확인.
 4. 의도적으로 법령을 줄인 경우에만 `FORCE_INGEST=1`로 가드를 우회하세요.
 
 ---
@@ -97,7 +97,7 @@ uvicorn backend.app:app --port 8000
 cd frontend && npm ci && npm run build && npm start
 ```
 
-데이터의 원본은 (1) 이 저장소의 커밋 이력, (2) `data/snapshots/`, (3) law.go.kr API 세 곳에 존재합니다. 셋 다 사라지는 경우는 사실상 없습니다.
+데이터의 원본은 (1) 이 저장소의 커밋 이력, (2) `data/corpus/snapshots/`, (3) law.go.kr API 세 곳에 존재합니다. 셋 다 사라지는 경우는 사실상 없습니다.
 
 ---
 
@@ -115,7 +115,7 @@ cd frontend && npm ci && npm run build && npm start
 같은 코드인데 어떤 실행은 통과하고 어떤 실행은 실패한다면 **시간·전역 상태 의존 테스트**를 의심하세요.
 
 - `time.monotonic()`은 **부팅 이후 경과 시간**입니다. CI 러너는 매번 새 VM이라 값이 작습니다(수십 초). 테스트에서 `opened_at = 0.0` 같은 절대값을 쓰면 "방금 열림"으로 해석되어 간헐적으로 실패합니다. 항상 `time.monotonic() - N` 형태의 상대값을 쓰세요.
-- 회로 차단기·속도 제한 카운터는 프로세스 전역입니다. `backend/conftest.py`의 autouse 픽스처가 매 테스트마다 초기화합니다. 새 전역 상태를 추가하면 이 픽스처에도 추가하세요.
+- 회로 차단기·속도 제한 카운터는 프로세스 전역입니다. `tests/backend/conftest.py`의 autouse 픽스처가 매 테스트마다 초기화합니다. 새 전역 상태를 추가하면 이 픽스처에도 추가하세요.
 - CI의 "환경 정보" 스텝에서 `monotonic(uptime)` 값과 설치된 패키지 버전을 확인할 수 있습니다.
 
 ## 9. CI의 e2e 잡이 실패

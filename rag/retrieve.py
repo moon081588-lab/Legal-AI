@@ -11,11 +11,11 @@ import numpy as np
 from rank_bm25 import BM25Okapi
 
 ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_DATA = ROOT / "data" / "articles.jsonl"
-SAMPLE_DATA = ROOT / "data" / "sample" / "articles.jsonl"
-GUIDES_DIR = ROOT / "data" / "guides"  # curated guides, always loaded alongside statutes
-PREC_DATA = ROOT / "data" / "precedents.jsonl"  # ingested precedents (real)
-PREC_SAMPLE = ROOT / "data" / "sample" / "precedents.jsonl"  # dev fixture
+DEFAULT_DATA = ROOT / "data" / "corpus" / "articles.jsonl"
+SAMPLE_DATA = ROOT / "data" / "corpus" / "sample" / "articles.jsonl"
+GUIDES_DIR = ROOT / "data" / "corpus" / "guides"  # curated guides, always loaded alongside statutes
+PREC_DATA = ROOT / "data" / "corpus" / "precedents.jsonl"  # ingested precedents (real)
+PREC_SAMPLE = ROOT / "data" / "corpus" / "sample" / "precedents.jsonl"  # dev fixture
 
 
 # Colloquial -> statutory vocabulary. Phase 1 replaces this with an LLM query-rewrite step.
@@ -61,7 +61,7 @@ class Retriever:
         self._cache: dict[tuple[str, int], list[dict]] = {}
         path = data_path or (DEFAULT_DATA if DEFAULT_DATA.exists() else SAMPLE_DATA)
         if not path.exists():
-            raise SystemExit("조문 데이터가 없습니다. ingest 스크립트를 실행하시거나 data/sample/을 유지해 주세요.")
+            raise SystemExit("조문 데이터가 없습니다. ingest 스크립트를 실행하시거나 data/corpus/sample/을 유지해 주세요.")
         self.path = path
         self.articles = [json.loads(l) for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
         prec_path = PREC_DATA if PREC_DATA.exists() else PREC_SAMPLE

@@ -77,26 +77,39 @@ python scripts/validate_data.py       # 데이터 검사
 ```
 
 > [!WARNING]
-> `data/sample/`은 수작업으로 만든 개발용 데이터로 최신 법령과 다를 수 있습니다. **공개 서비스에는 반드시 API로 수집한 데이터를 사용하세요.** GitHub Secrets에 `LAW_GO_KR_OC`를 등록하면 매주 자동 갱신됩니다.
+> `data/corpus/sample/`은 수작업으로 만든 개발용 데이터로 최신 법령과 다를 수 있습니다. **공개 서비스에는 반드시 API로 수집한 데이터를 사용하세요.** GitHub Secrets에 `LAW_GO_KR_OC`를 등록하면 매주 자동 갱신됩니다.
 
 ## 🏗 구조
 
 ```
-backend/    FastAPI — /api/chat(SSE 스트리밍), 지원제도·체크리스트·절차 API, 스키마
-rag/        BM25 검색 · 프롬프트 · 인용 검증
-ingest/     law.go.kr 수집 · 검증 · 스냅샷/롤백
-data/       법령·판례·가이드·지원제도·연락처 (모두 출처 포함)
-frontend/   Next.js 채팅 UI · 증거 일지 · 용어 사전 (PWA)
-templates/  고소장 · CCTV 보존요청서 서식
-scripts/    데이터 검증 · OpenAPI 덤프 · 배포 연기 테스트
-evals/      검색 정확도 평가 (CI 차단 게이트)
+backend/          FastAPI 앱 — /api/chat(SSE), 지원제도·체크리스트·절차 API
+  app.py            라우트 · 가드레일(위기·변호사법) · 회로 차단기 · 속도 제한
+  schemas.py        데이터/응답 스키마 (검증 + OpenAPI 타입 원천)
+rag/              BM25 검색 · 프롬프트 · 인용 검증
+ingest/           law.go.kr 수집 · 안전 쓰기 · 스냅샷/롤백
+data/
+  content/          사람이 작성·검수하는 콘텐츠 (모두 출처·확인일 포함)
+    templates/        고소장 · CCTV 보존요청서 서식
+  corpus/           법령 말뭉치 — sample(개발용), guides, 수집 결과·스냅샷
+frontend/         Next.js PWA — 채팅 · 증거 일지 · 용어 사전 · 개인정보
+  app/lib/          SSE 파서 · 일지 저장소 · ICS · API 타입(자동 생성)
+scripts/          cli · 데이터 검증 · OpenAPI 덤프 · 배포 연기 테스트
+tests/
+  backend/          pytest (단위 · 계약 · 카오스)
+  load/             k6 부하 테스트
+evals/            검색 정확도 평가 (CI 차단 게이트)
+docs/             설계 · 배포 · 안정성 · 장애대응 · 법률검토 · 앱스토어
 ```
+
+> **data/content vs data/corpus** — `content/`는 사람이 직접 쓰고 변호사 검토를 받아야 하는
+> 콘텐츠(체크리스트·지원제도·연락처·용어)이고, `corpus/`는 API로 수집하거나 생성되는 법령
+> 말뭉치입니다. 검수 대상과 자동 갱신 대상을 구분하기 위해 나눠 두었습니다.
 
 ## 🧪 개발
 
 ```bash
 python scripts/validate_data.py    # 데이터 스키마 검사
-python -m pytest backend/ -q       # 백엔드 + 카오스 테스트
+python -m pytest tests/backend -q       # 백엔드 + 카오스 테스트
 python evals/run_evals.py          # 검색 정확도 (Recall@5, 실패 시 exit 1)
 cd frontend && npm test            # 단위 테스트
 cd frontend && npm run e2e         # E2E (Playwright)

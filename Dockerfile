@@ -14,7 +14,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ ./backend/
 COPY rag/ ./rag/
 COPY data/ ./data/
-COPY templates/ ./templates/
 COPY scripts/ ./scripts/
 
 # Fail the build if the shipped data doesn't match the schemas.

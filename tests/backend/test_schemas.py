@@ -8,12 +8,12 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from backend.schemas import Checklist, SupportFile, validate_data_files  # noqa: E402
 
-DATA = ROOT / "data"
+DATA = ROOT / "data" / "content"
 
 
 def test_all_data_files_match_their_schema():

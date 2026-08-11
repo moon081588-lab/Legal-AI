@@ -452,8 +452,8 @@ def summary(req: SummaryRequest, x_anthropic_key: str | None = Header(default=No
         return {"content": summary_fallback(req.messages), "generated": False}
 
 
-CHECKLISTS = json.loads((ROOT / "data" / "checklists.json").read_text(encoding="utf-8"))
-TEMPLATES_DIR = ROOT / "templates"
+CHECKLISTS = json.loads((ROOT / "data" / "content" / "checklists.json").read_text(encoding="utf-8"))
+TEMPLATES_DIR = ROOT / "data" / "content" / "templates"
 
 
 # Data files carry provenance metadata alongside their content. Never treat these
@@ -487,11 +487,11 @@ def template(name: str):
     return {"name": safe[name], "content": (TEMPLATES_DIR / safe[name]).read_text(encoding="utf-8")}
 
 
-PROCEDURE = json.loads((ROOT / "data" / "procedure.json").read_text(encoding="utf-8"))
-DEADLINES = json.loads((ROOT / "data" / "deadlines.json").read_text(encoding="utf-8"))
-SUPPORT = json.loads((ROOT / "data" / "support.json").read_text(encoding="utf-8"))
-CENTERS = json.loads((ROOT / "data" / "centers.json").read_text(encoding="utf-8"))
-GLOSSARY = json.loads((ROOT / "data" / "glossary.json").read_text(encoding="utf-8"))
+PROCEDURE = json.loads((ROOT / "data" / "content" / "procedure.json").read_text(encoding="utf-8"))
+DEADLINES = json.loads((ROOT / "data" / "content" / "deadlines.json").read_text(encoding="utf-8"))
+SUPPORT = json.loads((ROOT / "data" / "content" / "support.json").read_text(encoding="utf-8"))
+CENTERS = json.loads((ROOT / "data" / "content" / "centers.json").read_text(encoding="utf-8"))
+GLOSSARY = json.loads((ROOT / "data" / "content" / "glossary.json").read_text(encoding="utf-8"))
 
 
 class EligibilityRequest(BaseModel):

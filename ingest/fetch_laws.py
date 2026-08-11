@@ -20,7 +20,7 @@ from urllib.request import urlopen
 
 BASE = "https://www.law.go.kr/DRF"
 ROOT = Path(__file__).resolve().parent.parent
-RAW_DIR = ROOT / "data" / "raw"
+RAW_DIR = ROOT / "data" / "corpus" / "raw"
 
 
 def api_get(endpoint: str, **params) -> bytes:

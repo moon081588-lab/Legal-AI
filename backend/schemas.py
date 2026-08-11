@@ -1,7 +1,7 @@
 """Typed schemas for the JSON data files and API responses.
 
 One set of models does double duty:
-  * validates every `data/*.json` file (in CI and at server startup), so a
+  * validates every `data/content/*.json` file (in CI and at server startup), so a
     malformed or drifted file fails loudly instead of 500-ing a user request
   * types the API responses, which feeds OpenAPI → generated TypeScript types
 
@@ -16,7 +16,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field, HttpUrl
 
-DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "content"
 
 # Provenance metadata that may appear at the top level of any data file.
 # Never content — see META_KEYS in app.py.

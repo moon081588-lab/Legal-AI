@@ -6,8 +6,8 @@
 
 | 지표 | 목표 | 측정 방법 | CI 차단 여부 |
 |---|---|---|---|
-| 백엔드 테스트 통과율 | 100% (27건) | `pytest backend/` | ✅ 차단 |
-| 카오스 테스트 (장애 주입) | 14/14 통과 | `pytest backend/test_chaos.py` | ✅ 차단 |
+| 백엔드 테스트 통과율 | 100% (27건) | `pytest tests/backend` | ✅ 차단 |
+| 카오스 테스트 (장애 주입) | 14/14 통과 | `pytest tests/backend/test_chaos.py` | ✅ 차단 |
 | 검색 정확도 Recall@5 | 100% (16/16) | `python evals/run_evals.py` (실패 시 exit 1) | ✅ 차단 |
 | 프론트 단위 테스트 | 100% 통과 | `npm test` (vitest) | ✅ 차단 |
 | `app/lib` 커버리지 | ≥70% lines/functions | `npx vitest run --coverage` | ⚠️ 임계값 설정됨 |
@@ -25,7 +25,7 @@
 ```bash
 # 백엔드
 pip install -r requirements.txt -r requirements-dev.txt
-python -m pytest backend/ -q
+python -m pytest tests/backend -q
 python evals/run_evals.py
 
 # 프론트엔드
@@ -56,12 +56,12 @@ k6 run tests/load/k6_chat.js
 
 | 위험 | 대응 | 확인 방법 |
 |---|---|---|
-| 잘못된 수집이 정상 데이터를 덮어씀 | `safe_write` 가드 — 검증 실패·20% 이상 축소 시 쓰기 거부 | `pytest backend/test_chaos.py` |
+| 잘못된 수집이 정상 데이터를 덮어씀 | `safe_write` 가드 — 검증 실패·20% 이상 축소 시 쓰기 거부 | `pytest tests/backend/test_chaos.py` |
 | 쓰기 도중 중단으로 파일 손상 | 임시 파일 + fsync + rename (원자적 쓰기) | 동일 |
 | 조용한 데이터 손상 | `.sha256` 사이드카 | `python ingest/rollback.py --verify` |
 | 나쁜 데이터 배포 | 날짜별 스냅샷 + 롤백 명령 | `python ingest/rollback.py` |
 | 수집 후 품질 저하 | 커밋 전 검색 평가 실행 (실패 시 커밋 안 함) | `.github/workflows/ingest.yml` |
-| 모델 API 장애 | 회로 차단기 → 조문 원문 답변으로 자동 전환, 60초 후 복귀 | `pytest backend/test_chaos.py` |
+| 모델 API 장애 | 회로 차단기 → 조문 원문 답변으로 자동 전환, 60초 후 복귀 | `pytest tests/backend/test_chaos.py` |
 | 배포 중 답변 끊김 | lifespan 종료 시 진행 중 스트림 최대 10초 드레인 | `/api/readyz`의 `active_streams` |
 | 준비 안 된 인스턴스로 트래픽 유입 | `/api/livez`(생존) · `/api/readyz`(준비) 분리 | `curl /api/readyz` |
 | 사용자 증거 일지 소실 | IndexedDB 저장 + localStorage 자동 마이그레이션 + 암호화 백업/복원 + 백업 권유 | `/journal` |

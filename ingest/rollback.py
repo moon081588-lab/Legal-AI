@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from safe_write import SNAPSHOT_DIR, load_existing, safe_write, verify_checksum  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-DATA = ROOT / "data"
+DATA = ROOT / "data" / "corpus"
 TARGETS = {"articles": DATA / "articles.jsonl", "precedents": DATA / "precedents.jsonl"}
 
 
