@@ -134,6 +134,8 @@ python tools/dump_openapi.py && npm --prefix frontend run gen:types
 | [docs/stability.md](docs/stability.md) | 안정성·내구성 지표와 측정 방법 |
 | [docs/runbook.md](docs/runbook.md) | 장애 대응 절차 |
 | [docs/legal-review.md](docs/legal-review.md) | **변호사 검토 요청서** — 검토가 필요한 항목 정리 |
+| [docs/release.md](docs/release.md) | 버전 규칙과 릴리스 절차 |
+| [CHANGELOG.md](CHANGELOG.md) | 변경 이력 (법령·제도 갱신 포함) |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 기여 방법과 원칙 |
 
 ## 🙌 함께해 주세요

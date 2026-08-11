@@ -33,6 +33,7 @@ echo "연기 테스트: $BASE"
 check "생존 확인"        "/api/livez"              '"alive"'
 check "준비 확인"        "/api/readyz"             '"ready":true'
 check "상태"             "/api/health"             '"articles"'
+check "버전 노출"        "/api/health"             '"version"'
 check "체크리스트 목록"   "/api/checklists"         '"assault"'
 check "체크리스트 상세"   "/api/checklists/assault" '"urgent"'
 check "지원제도 질문"     "/api/support/questions"  '"crime_type"'

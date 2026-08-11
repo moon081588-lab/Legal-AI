@@ -107,7 +107,18 @@ PoC 단계에서는 **검색엔진 비노출**로 시작해 지인·전문가에
 
 ---
 
-## 6. 롤백
+## 6. 배포된 버전 확인
+
+```bash
+curl -s https://legal-ai-api.fly.dev/api/health | python -m json.tool
+# {"status":"ok","version":"0.1.0", ...}
+```
+
+릴리스 절차는 [release.md](release.md)를 참고하세요.
+
+---
+
+## 7. 롤백
 
 ```bash
 fly releases                    # 배포 이력

@@ -43,7 +43,7 @@ from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from fastapi.responses import JSONResponse, StreamingResponse  # noqa: E402
 from pydantic import BaseModel, Field  # noqa: E402
 
-from backend import schemas  # noqa: E402
+from backend import __version__, schemas  # noqa: E402
 from backend.rag.answer import SYSTEM_PROMPT, build_user_prompt, option_instructions  # noqa: E402
 from backend.rag.retrieve import Retriever  # noqa: E402
 from backend.rag.verify import verify_citations  # noqa: E402
@@ -109,7 +109,7 @@ async def lifespan(_app: FastAPI):
     logger.info("shutdown complete active_streams=%d", _state["active_streams"])
 
 
-app = FastAPI(title="Legal-AI", lifespan=lifespan)
+app = FastAPI(title="Legal-AI", version=__version__, lifespan=lifespan)
 # Comma-separated origins, e.g. "https://legal-ai.vercel.app,http://localhost:3000".
 ALLOWED_ORIGINS = [
     o.strip()
@@ -613,6 +613,8 @@ def readyz():
 def health():
     return {
         "status": "ok",
+        # 배포된 버전을 외부에서 확인할 수 있게 노출합니다(연기 테스트·장애 대응에 사용).
+        "version": __version__,
         "data": retriever.path.name,
         "generation": bool(os.environ.get("ANTHROPIC_API_KEY")),
         "rate_limit_per_min": RATE_LIMIT_PER_MIN,

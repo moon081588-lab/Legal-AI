@@ -1,0 +1,50 @@
+name: 릴리스
+
+# v로 시작하는 태그를 푸시하면 실행됩니다:  git tag v0.1.0 && git push origin v0.1.0
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+
+      # 릴리스 전 최소 검증 — 깨진 상태로 태그가 박히는 것을 막습니다.
+      - name: 데이터 스키마 검사
+        run: python tools/validate_data.py
+      - name: 백엔드 테스트
+        run: python -m pytest tests/backend -q
+      - name: 검색 평가
+        run: python tests/evals/run_evals.py
+
+      - name: 태그와 코드 버전이 일치하는지 확인
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          CODE=$(python -c "import backend; print(backend.__version__)")
+          if [ "$TAG" != "$CODE" ]; then
+            echo "::error::태그($TAG)와 backend/__init__.py 버전($CODE)이 다릅니다."
+            exit 1
+          fi
+          echo "버전 일치: $TAG"
+
+      - name: 릴리스 노트 추출
+        run: |
+          python tools/release_notes.py "${GITHUB_REF_NAME}" > /tmp/notes.md
+          cat /tmp/notes.md
+
+      - name: GitHub 릴리스 생성
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: /tmp/notes.md
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}

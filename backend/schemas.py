@@ -155,6 +155,7 @@ class SupportMatchResponse(BaseModel):
 
 class HealthResponse(BaseModel):
     status: str
+    version: str
     data: str
     generation: bool
     rate_limit_per_min: int
