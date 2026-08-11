@@ -70,10 +70,10 @@ http://localhost:3000 을 열어 주세요. **API 키 없이도 모든 기능이
 
 ```bash
 export LAW_GO_KR_OC=본인아이디        # open.law.go.kr 무료 가입 (이메일 @ 앞부분)
-python ingest/fetch_laws.py           # ingest/laws.txt 의 법령 수집
-python ingest/parse_laws.py
-python ingest/fetch_precedents.py     # 판례 수집
-python scripts/validate_data.py       # 데이터 검사
+python tools/ingest/fetch_laws.py           # tools/ingest/laws.txt 의 법령 수집
+python tools/ingest/parse_laws.py
+python tools/ingest/fetch_precedents.py     # 판례 수집
+python tools/validate_data.py       # 데이터 검사
 ```
 
 > [!WARNING]
@@ -82,40 +82,44 @@ python scripts/validate_data.py       # 데이터 검사
 ## 🏗 구조
 
 ```
-backend/          FastAPI 앱 — /api/chat(SSE), 지원제도·체크리스트·절차 API
-  app.py            라우트 · 가드레일(위기·변호사법) · 회로 차단기 · 속도 제한
-  schemas.py        데이터/응답 스키마 (검증 + OpenAPI 타입 원천)
-rag/              BM25 검색 · 프롬프트 · 인용 검증
-ingest/           law.go.kr 수집 · 안전 쓰기 · 스냅샷/롤백
-data/
-  content/          사람이 작성·검수하는 콘텐츠 (모두 출처·확인일 포함)
-    templates/        고소장 · CCTV 보존요청서 서식
-  corpus/           법령 말뭉치 — sample(개발용), guides, 수집 결과·스냅샷
-frontend/         Next.js PWA — 채팅 · 증거 일지 · 용어 사전 · 개인정보
-  app/lib/          SSE 파서 · 일지 저장소 · ICS · API 타입(자동 생성)
-scripts/          cli · 데이터 검증 · OpenAPI 덤프 · 배포 연기 테스트
-tests/
-  backend/          pytest (단위 · 계약 · 카오스)
-  load/             k6 부하 테스트
-evals/            검색 정확도 평가 (CI 차단 게이트)
-docs/             설계 · 배포 · 안정성 · 장애대응 · 법률검토 · 앱스토어
+Legal-AI/
+├── backend/     🐍 Python API — 서버에서 도는 모든 것
+│   ├── app.py       라우트 · 가드레일(위기·변호사법) · 회로 차단기 · 속도 제한
+│   ├── schemas.py   데이터/응답 스키마 (검증 + OpenAPI 타입의 원천)
+│   └── rag/         BM25 검색 · 프롬프트 · 인용 검증
+│
+├── frontend/    ⚛️ Next.js PWA — 채팅 · 증거 일지 · 용어 사전 · 개인정보
+│   └── app/lib/     SSE 파서 · 일지 저장소 · ICS · API 타입(자동 생성)
+│
+├── data/        📚 앱이 제공하는 모든 자료
+│   ├── content/     사람이 쓰고 변호사 검토가 필요한 콘텐츠 (출처·확인일 필수)
+│   │   └── templates/  고소장 · CCTV 보존요청서 서식
+│   └── corpus/      법령 말뭉치 — 자동 수집·갱신 (sample은 개발용)
+│
+├── tools/       🔧 개발·운영 도구
+│   ├── ingest/      law.go.kr 수집 · 안전 쓰기 · 스냅샷/롤백
+│   ├── cli.py       터미널에서 질문하기
+│   ├── validate_data.py · dump_openapi.py · smoke.sh
+│
+├── tests/       ✅ backend(단위·계약·카오스) · evals(검색 정확도) · load(k6)
+└── docs/        📖 설계 · 배포 · 안정성 · 장애대응 · 법률검토 · 앱스토어
 ```
 
-> **data/content vs data/corpus** — `content/`는 사람이 직접 쓰고 변호사 검토를 받아야 하는
-> 콘텐츠(체크리스트·지원제도·연락처·용어)이고, `corpus/`는 API로 수집하거나 생성되는 법령
-> 말뭉치입니다. 검수 대상과 자동 갱신 대상을 구분하기 위해 나눠 두었습니다.
+> **왜 이렇게 나눴나** — `data/content`는 **사람이 검수**해야 하는 콘텐츠, `data/corpus`는
+> **자동으로 갱신**되는 법령입니다. 이 경계가 변호사 검토 대상과 주간 수집 대상을 가릅니다.
+> `backend/`는 서버에서 도는 것 전부(검색 로직 포함), `tools/`는 서버에서 돌지 않는 것 전부입니다.
 
 ## 🧪 개발
 
 ```bash
-python scripts/validate_data.py    # 데이터 스키마 검사
+python tools/validate_data.py    # 데이터 스키마 검사
 python -m pytest tests/backend -q       # 백엔드 + 카오스 테스트
-python evals/run_evals.py          # 검색 정확도 (Recall@5, 실패 시 exit 1)
+python tests/evals/run_evals.py          # 검색 정확도 (Recall@5, 실패 시 exit 1)
 cd frontend && npm test            # 단위 테스트
 cd frontend && npm run e2e         # E2E (Playwright)
 
 # 백엔드 응답 모양을 바꿨다면 타입 재생성 후 커밋 (CI가 검사)
-python scripts/dump_openapi.py && npm --prefix frontend run gen:types
+python tools/dump_openapi.py && npm --prefix frontend run gen:types
 ```
 
 모든 PR은 CI에서 **데이터 검증 · 백엔드/카오스 테스트 · 검색 평가 · 타입 계약 · 빌드 · E2E**를 통과해야 합니다. 품질 지표는 [docs/stability.md](docs/stability.md), 장애 대응은 [docs/runbook.md](docs/runbook.md)를 참고하세요.
@@ -139,9 +143,9 @@ python scripts/dump_openapi.py && npm --prefix frontend run gen:types
 코딩을 하지 않아도 기여할 수 있습니다:
 
 - ⚖️ **변호사·법학 전공자** — [docs/legal-review.md](docs/legal-review.md)의 항목을 검토해 주세요. 가장 절실한 도움입니다.
-- 📝 **법령·판례 추가** — `ingest/laws.txt`, `ingest/precedent_queries.txt`에 한 줄 추가
-- 🗣 **평가 질문 추가** — `evals/questions.jsonl`에 실제 사람들이 물어볼 질문 추가
-- 💬 **구어체 사전 확장** — `rag/retrieve.py`의 `QUERY_SYNONYMS` (예: "퇴사"→"퇴직")
+- 📝 **법령·판례 추가** — `tools/ingest/laws.txt`, `tools/ingest/precedent_queries.txt`에 한 줄 추가
+- 🗣 **평가 질문 추가** — `tests/evals/questions.jsonl`에 실제 사람들이 물어볼 질문 추가
+- 💬 **구어체 사전 확장** — `backend/rag/retrieve.py`의 `QUERY_SYNONYMS` (예: "퇴사"→"퇴직")
 - 💻 **개발** — 카카오톡 채널 연동, pgvector 하이브리드 검색, 모바일 UI, 접근성 개선
 
 자세한 내용은 [CONTRIBUTING.md](CONTRIBUTING.md)에 있습니다. 이슈·PR·아이디어 무엇이든 환영합니다.

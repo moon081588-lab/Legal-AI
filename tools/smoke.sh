@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # 배포 후 연기 테스트 — 상태 코드만이 아니라 응답 "모양"까지 확인합니다.
 #
-#   ./scripts/smoke.sh                          # 로컬 (localhost:8000)
-#   ./scripts/smoke.sh https://legal-ai-api.fly.dev
+#   ./tools/smoke.sh                          # 로컬 (localhost:8000)
+#   ./tools/smoke.sh https://legal-ai-api.fly.dev
 #
 # 실패하면 즉시 0이 아닌 코드로 종료하므로 배포 파이프라인에 그대로 넣을 수 있습니다.
 

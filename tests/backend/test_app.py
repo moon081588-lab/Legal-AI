@@ -87,13 +87,13 @@ def test_unsupported_languages_are_rejected(lang):
 
 
 def test_language_options_are_exactly_ko_and_en():
-    from rag.answer import LANG_NAMES
+    from backend.rag.answer import LANG_NAMES
 
     assert set(LANG_NAMES) == {"ko", "en"}
 
 
 def test_retrieval_cache_returns_equal_results():
-    from rag.retrieve import Retriever
+    from backend.rag.retrieve import Retriever
 
     r = Retriever()
     a = r.search("전세 보증금", k=5)
@@ -202,7 +202,7 @@ def test_feedback_records_negative_as_eval_candidate(tmp_path, monkeypatch):
     monkeypatch.setattr(m, "ROOT", tmp_path)
     r = client.post("/api/feedback", json={"helpful": False, "question": "테스트 질문", "reason": "부정확"})
     assert r.json()["ok"]
-    written = (tmp_path / "evals" / "candidates.jsonl").read_text(encoding="utf-8")
+    written = (tmp_path / "data" / "feedback" / "candidates.jsonl").read_text(encoding="utf-8")
     assert "테스트 질문" in written
 
 
@@ -211,7 +211,7 @@ def test_positive_feedback_is_not_stored_as_candidate(tmp_path, monkeypatch):
 
     monkeypatch.setattr(m, "ROOT", tmp_path)
     client.post("/api/feedback", json={"helpful": True, "question": "좋은 답변"})
-    assert not (tmp_path / "evals" / "candidates.jsonl").exists()
+    assert not (tmp_path / "data" / "feedback" / "candidates.jsonl").exists()
 
 
 def test_triage_only_for_short_vague_questions():

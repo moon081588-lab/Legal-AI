@@ -8,7 +8,7 @@
 curl -s localhost:8000/api/livez     # 프로세스 살아있는지
 curl -s localhost:8000/api/readyz    # 트래픽 받을 준비 됐는지 (503이면 아래 1번)
 curl -s localhost:8000/api/health    # 조문 수, 캐시, 생성 기능 활성화 여부
-python ingest/rollback.py --verify   # 데이터 무결성(체크섬)
+python tools/ingest/rollback.py --verify   # 데이터 무결성(체크섬)
 ```
 
 로그에서 볼 것: `breaker=open`(모델 API 장애), `route=rate_limited`(요청 폭주), `client_error`(프론트 크래시), `ttft_ms`가 평소보다 큼(지연).
@@ -22,7 +22,7 @@ python ingest/rollback.py --verify   # 데이터 무결성(체크섬)
 ```bash
 curl -s localhost:8000/api/readyz | python -m json.tool   # articles 값 확인
 ls -l data/corpus/articles.jsonl data/corpus/sample/articles.jsonl
-python ingest/rollback.py --verify
+python tools/ingest/rollback.py --verify
 ```
 
 - `articles: 0` → 데이터 파일이 비었거나 손상. **2번**으로.
@@ -35,14 +35,14 @@ python ingest/rollback.py --verify
 증상: 답변에 조문이 안 나옴, 인용 검증 경고 급증, 검색 평가 실패.
 
 ```bash
-python ingest/rollback.py                      # 스냅샷 목록 확인
-python ingest/rollback.py articles 2026-08-04  # 직전 정상 날짜로 복원
-python evals/run_evals.py                      # 16/16 확인
+python tools/ingest/rollback.py                      # 스냅샷 목록 확인
+python tools/ingest/rollback.py articles 2026-08-04  # 직전 정상 날짜로 복원
+python tests/evals/run_evals.py                      # 16/16 확인
 # 서비스 재시작 후
 curl -s localhost:8000/api/health
 ```
 
-판례도 동일: `python ingest/rollback.py precedents <날짜>`.
+판례도 동일: `python tools/ingest/rollback.py precedents <날짜>`.
 
 되돌린 뒤 원인 파악 전까지 주간 수집 워크플로를 비활성화하세요(GitHub → Actions → 해당 workflow → Disable).
 
@@ -55,8 +55,8 @@ curl -s localhost:8000/api/health
 **서비스는 정상 동작합니다.** 기존 데이터가 그대로 유지되도록 설계되어 있으므로 급하지 않습니다.
 
 1. https://open.law.go.kr 접속 확인(점검 공지 여부).
-2. 수동 확인: `LAW_GO_KR_OC=<id> python ingest/fetch_laws.py`
-3. 응답 XML 구조가 바뀐 경우 `ingest/parse_laws.py`의 태그명을 수정하고 `python -m pytest tests/backend/test_chaos.py -q`로 가드가 여전히 동작하는지 확인.
+2. 수동 확인: `LAW_GO_KR_OC=<id> python tools/ingest/fetch_laws.py`
+3. 응답 XML 구조가 바뀐 경우 `tools/ingest/parse_laws.py`의 태그명을 수정하고 `python -m pytest tests/backend/test_chaos.py -q`로 가드가 여전히 동작하는지 확인.
 4. 의도적으로 법령을 줄인 경우에만 `FORCE_INGEST=1`로 가드를 우회하세요.
 
 ---

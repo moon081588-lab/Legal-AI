@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from rag.verify import verify_citations
+from backend.rag.verify import verify_citations
 
 SOURCES = [
     {"law_name": "주택임대차보호법", "article_no": "제3조의3", "text": "임차권등기명령 조문 내용"},

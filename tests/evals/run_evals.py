@@ -7,17 +7,17 @@ import json
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from rag.retrieve import Retriever  # noqa: E402
+from backend.rag.retrieve import Retriever  # noqa: E402
 
 
 def main() -> None:
     retriever = Retriever()
     questions = [
         json.loads(l)
-        for l in (ROOT / "evals" / "questions.jsonl").read_text(encoding="utf-8").splitlines()
+        for l in (Path(__file__).parent / "questions.jsonl").read_text(encoding="utf-8").splitlines()
         if l.strip()
     ]
     scored = [q for q in questions if q.get("expected_law")]

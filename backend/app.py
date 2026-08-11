@@ -44,9 +44,9 @@ from fastapi.responses import JSONResponse, StreamingResponse  # noqa: E402
 from pydantic import BaseModel, Field  # noqa: E402
 
 from backend import schemas  # noqa: E402
-from rag.answer import SYSTEM_PROMPT, build_user_prompt, option_instructions  # noqa: E402
-from rag.retrieve import Retriever  # noqa: E402
-from rag.verify import verify_citations  # noqa: E402
+from backend.rag.answer import SYSTEM_PROMPT, build_user_prompt, option_instructions  # noqa: E402
+from backend.rag.retrieve import Retriever  # noqa: E402
+from backend.rag.verify import verify_citations  # noqa: E402
 
 DISCLAIMER = (
     "※ 이 답변은 AI가 생성한 일반적인 법령 정보이며 법률 자문이 아닙니다. "
@@ -550,7 +550,7 @@ def feedback(fb: Feedback):
     beyond the question they chose to send."""
     logger.info("feedback helpful=%s reason=%r", fb.helpful, fb.reason[:200])
     if not fb.helpful and fb.question.strip():
-        path = ROOT / "evals" / "candidates.jsonl"
+        path = ROOT / "data" / "feedback" / "candidates.jsonl"
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("a", encoding="utf-8") as f:
             f.write(json.dumps(

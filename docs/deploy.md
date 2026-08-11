@@ -23,12 +23,12 @@
 ```bash
 # open.law.go.kr 가입 후 (OC = 이메일의 @ 앞부분)
 export LAW_GO_KR_OC=본인아이디
-python ingest/fetch_laws.py
-python ingest/parse_laws.py
-python ingest/fetch_precedents.py
+python tools/ingest/fetch_laws.py
+python tools/ingest/parse_laws.py
+python tools/ingest/fetch_precedents.py
 
-python scripts/validate_data.py     # 데이터 모양 검사
-python evals/run_evals.py           # 검색 정확도 확인
+python tools/validate_data.py     # 데이터 모양 검사
+python tests/evals/run_evals.py           # 검색 정확도 확인
 git add data/ && git commit -m "실제 법령·판례 데이터 반영" && git push
 ```
 
@@ -58,7 +58,7 @@ fly logs                        # 로그
 배포가 끝나면 주소가 나옵니다(예: `https://legal-ai-api.fly.dev`).
 
 ```bash
-./scripts/smoke.sh https://legal-ai-api.fly.dev    # 전체 통과해야 정상
+./tools/smoke.sh https://legal-ai-api.fly.dev    # 전체 통과해야 정상
 ```
 
 ---
@@ -82,7 +82,7 @@ fly secrets set LEGAL_AI_ALLOWED_ORIGINS="https://legal-ai.vercel.app"
 ## 4. 공개 후 확인 목록
 
 ```bash
-./scripts/smoke.sh https://legal-ai-api.fly.dev
+./tools/smoke.sh https://legal-ai-api.fly.dev
 ```
 
 브라우저에서 직접 확인:
@@ -115,4 +115,4 @@ fly deploy --image <이전 이미지>  # 또는
 fly releases rollback
 ```
 
-데이터 문제라면 `python ingest/rollback.py` (자세한 내용은 `docs/runbook.md`).
+데이터 문제라면 `python tools/ingest/rollback.py` (자세한 내용은 `docs/runbook.md`).

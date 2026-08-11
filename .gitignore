@@ -5,7 +5,7 @@ data/corpus/raw/
 node_modules/
 frontend/.next/
 .pytest_cache/
-evals/candidates.jsonl
+data/feedback/
 frontend/playwright-report/
 frontend/test-results/
 frontend/tsconfig.tsbuildinfo

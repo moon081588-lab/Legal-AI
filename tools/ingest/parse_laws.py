@@ -17,7 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from safe_write import safe_write  # noqa: E402
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 RAW_DIR = ROOT / "data" / "corpus" / "raw"
 OUT_FILE = ROOT / "data" / "corpus" / "articles.jsonl"
 

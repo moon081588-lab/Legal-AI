@@ -12,12 +12,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Only what the API serves at runtime.
 COPY backend/ ./backend/
-COPY rag/ ./rag/
 COPY data/ ./data/
-COPY scripts/ ./scripts/
+COPY tools/validate_data.py ./tools/
 
 # Fail the build if the shipped data doesn't match the schemas.
-RUN python scripts/validate_data.py
+RUN python tools/validate_data.py
 
 RUN useradd -m app && chown -R app:app /app
 USER app

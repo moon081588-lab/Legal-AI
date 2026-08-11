@@ -17,7 +17,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 from backend import app as app_module  # noqa: E402
 from backend.app import app  # noqa: E402
-from ingest.safe_write import IngestGuardError, safe_write, validate, verify_checksum  # noqa: E402
+from tools.ingest.safe_write import IngestGuardError, safe_write, validate, verify_checksum  # noqa: E402
 
 client = TestClient(app)
 
@@ -154,7 +154,7 @@ def test_safe_write_is_atomic_and_checksummed(tmp_path):
 
 
 def test_snapshot_enables_rollback(tmp_path, monkeypatch):
-    import ingest.safe_write as sw
+    import tools.ingest.safe_write as sw
 
     monkeypatch.setattr(sw, "SNAPSHOT_DIR", tmp_path / "snapshots")
     target = tmp_path / "articles.jsonl"

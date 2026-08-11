@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fetch_laws import api_get  # noqa: E402
 from safe_write import safe_write  # noqa: E402
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 OUT_FILE = ROOT / "data" / "corpus" / "precedents.jsonl"
 QUERIES_FILE = Path(__file__).parent / "precedent_queries.txt"
 PER_QUERY = 10  # top precedents per search term

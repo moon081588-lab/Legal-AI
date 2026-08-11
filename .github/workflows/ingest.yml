@@ -25,19 +25,19 @@ jobs:
         env:
           LAW_GO_KR_OC: ${{ secrets.LAW_GO_KR_OC }}
         run: |
-          python ingest/fetch_laws.py
-          python ingest/parse_laws.py
+          python tools/ingest/fetch_laws.py
+          python tools/ingest/parse_laws.py
 
       - name: 판례 수집
         env:
           LAW_GO_KR_OC: ${{ secrets.LAW_GO_KR_OC }}
-        run: python ingest/fetch_precedents.py
+        run: python tools/ingest/fetch_precedents.py
 
       - name: 무결성 검사
-        run: python ingest/rollback.py --verify
+        run: python tools/ingest/rollback.py --verify
 
       - name: 갱신된 데이터로 검색 평가 (실패 시 커밋하지 않음)
-        run: python evals/run_evals.py
+        run: python tests/evals/run_evals.py
 
       - name: 변경 사항 커밋
         run: |

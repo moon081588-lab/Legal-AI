@@ -5,10 +5,10 @@
 ## 코딩 없이 기여하기 (법률 배경 환영)
 
 - **가이드 검토**: `data/corpus/guides/evidence.jsonl`의 증거확보 가이드 내용을 검토하고 부정확한 부분을 이슈로 알려 주세요. 특히 변호사·법학 전공자의 검토가 절실합니다 (`docs/legal-review.md` 참고).
-- **평가 질문 추가**: `evals/questions.jsonl`에 실제 사람들이 물어볼 법한 질문과 기대 근거(조문·판례)를 추가해 주세요.
-- **법령 추가**: `ingest/laws.txt`에 수요가 많은 법령의 정식 명칭을 추가해 주세요.
-- **판례 검색어 추가**: `ingest/precedent_queries.txt`에 유용한 판례 검색어를 추가해 주세요.
-- **구어체 사전 확장**: `rag/retrieve.py`의 `QUERY_SYNONYMS`에 일상어→법률용어 매핑을 추가해 주세요.
+- **평가 질문 추가**: `tests/evals/questions.jsonl`에 실제 사람들이 물어볼 법한 질문과 기대 근거(조문·판례)를 추가해 주세요.
+- **법령 추가**: `tools/ingest/laws.txt`에 수요가 많은 법령의 정식 명칭을 추가해 주세요.
+- **판례 검색어 추가**: `tools/ingest/precedent_queries.txt`에 유용한 판례 검색어를 추가해 주세요.
+- **구어체 사전 확장**: `backend/rag/retrieve.py`의 `QUERY_SYNONYMS`에 일상어→법률용어 매핑을 추가해 주세요.
 
 ## 코드로 기여하기
 
@@ -17,7 +17,7 @@
 ```bash
 pip install -r requirements.txt fastapi uvicorn pytest httpx
 python -m pytest tests/backend -q        # 테스트
-python evals/run_evals.py           # 검색 평가 (PR 전 통과 필수)
+python tests/evals/run_evals.py           # 검색 평가 (PR 전 통과 필수)
 ```
 
 ## 원칙 (반드시 지켜 주세요)

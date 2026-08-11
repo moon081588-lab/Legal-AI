@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 from rank_bm25 import BM25Okapi
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DATA = ROOT / "data" / "corpus" / "articles.jsonl"
 SAMPLE_DATA = ROOT / "data" / "corpus" / "sample" / "articles.jsonl"
 GUIDES_DIR = ROOT / "data" / "corpus" / "guides"  # curated guides, always loaded alongside statutes

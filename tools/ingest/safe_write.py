@@ -22,7 +22,7 @@ import tempfile
 from datetime import date
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 SNAPSHOT_DIR = ROOT / "data" / "corpus" / "snapshots"
 
 REQUIRED_FIELDS = ("law_name", "article_no", "text")

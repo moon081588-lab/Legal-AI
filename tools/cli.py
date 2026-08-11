@@ -13,8 +13,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from rag.retrieve import Retriever
-from rag.answer import answer
+from backend.rag.retrieve import Retriever
+from backend.rag.answer import answer
 
 
 def main() -> None:

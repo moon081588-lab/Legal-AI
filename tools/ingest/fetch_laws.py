@@ -19,7 +19,7 @@ from urllib.parse import urlencode
 from urllib.request import urlopen
 
 BASE = "https://www.law.go.kr/DRF"
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 RAW_DIR = ROOT / "data" / "corpus" / "raw"
 
 

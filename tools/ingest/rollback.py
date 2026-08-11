@@ -1,8 +1,8 @@
 """Roll back legal data to an earlier snapshot.
 
-    python ingest/rollback.py                 # 사용 가능한 스냅샷 목록
-    python ingest/rollback.py articles 2026-08-10
-    python ingest/rollback.py --verify        # 체크섬 무결성 검사
+    python tools/ingest/rollback.py                 # 사용 가능한 스냅샷 목록
+    python tools/ingest/rollback.py articles 2026-08-10
+    python tools/ingest/rollback.py --verify        # 체크섬 무결성 검사
 """
 
 import sys
@@ -11,7 +11,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from safe_write import SNAPSHOT_DIR, load_existing, safe_write, verify_checksum  # noqa: E402
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 DATA = ROOT / "data" / "corpus"
 TARGETS = {"articles": DATA / "articles.jsonl", "precedents": DATA / "precedents.jsonl"}
 
@@ -24,7 +24,7 @@ def list_snapshots() -> None:
     for f in sorted(SNAPSHOT_DIR.iterdir()):
         records = load_existing(f)
         print(f"  {f.name}  ({len(records)}건)")
-    print("\n복원: python ingest/rollback.py <articles|precedents> <YYYY-MM-DD>")
+    print("\n복원: python tools/ingest/rollback.py <articles|precedents> <YYYY-MM-DD>")
 
 
 def verify_all() -> int:
