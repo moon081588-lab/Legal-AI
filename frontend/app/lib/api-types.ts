@@ -321,7 +321,7 @@ export interface components {
              * @default ko
              * @enum {string}
              */
-            lang: "ko" | "en" | "vi" | "zh";
+            lang: "ko" | "en";
             /**
              * Simple
              * @default false

@@ -535,9 +535,7 @@
             "type": "string",
             "enum": [
               "ko",
-              "en",
-              "vi",
-              "zh"
+              "en"
             ],
             "title": "Lang",
             "default": "ko"

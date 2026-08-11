@@ -44,9 +44,7 @@ const EXAMPLES = [
   "가해자와 통화한 내용을 녹음해도 되나요?",
 ];
 
-const LANGS = [
-  ["ko", "한국어"], ["en", "English"], ["vi", "Tiếng Việt"], ["zh", "中文"],
-] as const;
+const LANGS = [["ko", "한국어"], ["en", "English"]] as const;
 
 function quickExit() {
   window.location.replace("https://weather.naver.com");
@@ -402,6 +400,7 @@ export default function Home() {
           <button className="settings-btn" onClick={openProcedure}>🧭 절차 안내</button>
           <button className="settings-btn" onClick={openDeadlines}>⏰ 기한 계산</button>
           <a className="settings-btn" href="/glossary">📖 용어 사전</a>
+          <a className="settings-btn" href="/privacy">🔒 개인정보</a>
           <a className="settings-btn" href="/journal">📔 증거 일지</a>
           {messages.length > 0 && (
             <button className="settings-btn" onClick={downloadSummary}>📄 상담 준비 요약서</button>

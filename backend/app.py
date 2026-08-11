@@ -133,7 +133,7 @@ RATE_LIMIT_PER_MIN = int(os.environ.get("LEGAL_AI_RATE_LIMIT", "20"))
 
 class ChatRequest(BaseModel):
     question: str = Field(min_length=1, max_length=MAX_QUESTION_CHARS)
-    lang: Literal["ko", "en", "vi", "zh"] = "ko"
+    lang: Literal["ko", "en"] = "ko"
     simple: bool = False
 
 

@@ -73,9 +73,23 @@ def test_long_question_is_rejected():
     assert r.status_code == 422
 
 
-def test_invalid_lang_is_rejected():
-    r = client.post("/api/chat", json={"question": "테스트", "lang": "xx"})
+@pytest.mark.parametrize("lang", ["ko", "en"])
+def test_supported_languages_are_accepted(lang):
+    r = client.post("/api/chat", json={"question": "전세 보증금 문제입니다", "lang": lang})
+    assert r.status_code == 200
+
+
+@pytest.mark.parametrize("lang", ["xx", "vi", "zh", "ja"])
+def test_unsupported_languages_are_rejected(lang):
+    """지원 언어는 한국어·영어 두 가지입니다."""
+    r = client.post("/api/chat", json={"question": "테스트", "lang": lang})
     assert r.status_code == 422
+
+
+def test_language_options_are_exactly_ko_and_en():
+    from rag.answer import LANG_NAMES
+
+    assert set(LANG_NAMES) == {"ko", "en"}
 
 
 def test_retrieval_cache_returns_equal_results():

@@ -30,7 +30,9 @@ SYSTEM_PROMPT = """당신은 대한민국 법령 정보를 안내하는 AI 도�
 """
 
 
-LANG_NAMES = {"ko": "한국어", "en": "English", "vi": "tiếng Việt", "zh": "中文"}
+# 지원 언어는 한국어·영어 두 가지입니다. 법령 원문은 한국어이므로, 번역 답변에도
+# 법령명과 조문 번호는 한국어를 병기해 사용자가 원문을 찾을 수 있게 합니다.
+LANG_NAMES = {"ko": "한국어", "en": "English"}
 
 
 def option_instructions(lang: str = "ko", simple: bool = False) -> str:
