@@ -38,14 +38,26 @@ cd frontend && npm install && npm run dev
 
 http://localhost:3000 을 열어 주세요. `ANTHROPIC_API_KEY`가 없으면 검색 전용 모드(관련 조문 원문 표시)로 동작하며, 백엔드 실행 전에 키를 설정하면 Claude가 조문을 인용한 답변을 생성합니다.
 
+## 배포
+
+공개 배포 절차는 [docs/deploy.md](docs/deploy.md)에 단계별로 정리되어 있습니다 (백엔드 Fly.io, 프론트엔드 Vercel, 약 30분). 배포 후에는 반드시 연기 테스트를 실행하세요:
+
+```bash
+./scripts/smoke.sh https://<배포된-백엔드-주소>
+```
+
 ## CLI / 테스트
 
 ```bash
 python cli.py "전세 보증금을 못 돌려받고 있어요"
+python scripts/validate_data.py       # 데이터 스키마 검사
 python -m pytest backend/ -q          # 백엔드 테스트
 python evals/run_evals.py             # 검색 정확도 (실패 시 exit 1)
 cd frontend && npm test               # 프론트 단위 테스트
 cd frontend && npm run e2e            # E2E (Playwright)
+
+# 백엔드 응답 모양을 바꿨다면 타입을 다시 생성해 커밋하세요 (CI가 검사합니다)
+python scripts/dump_openapi.py && npm --prefix frontend run gen:types
 ```
 
 품질 지표와 측정 방법은 [docs/stability.md](docs/stability.md), 장애 대응 절차는 [docs/runbook.md](docs/runbook.md)에 있습니다. 모든 PR은 CI에서 백엔드 테스트·카오스 테스트·검색 평가·타입 검사·빌드·E2E를 통과해야 합니다.

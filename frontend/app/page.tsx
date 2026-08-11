@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useEffect, useRef, useState } from "react";
+import type { components } from "./lib/api-types";
 import { downloadIcs } from "./lib/ics";
 import { SSEDecoder, type SSEEvent } from "./lib/sse";
 
@@ -24,21 +25,18 @@ type Message =
       rated?: boolean;
     };
 
-type SourceLink = { label: string; url: string };
-type Program = {
-  id: string; title: string; who: string; what: string; how: string;
-  contact: string; sources?: SourceLink[];
-};
-type Hotline = { name: string; phone: string; hours: string; for: string };
-type RegionRow = { region: string; klac: string; victim_center: string; sunflower: string };
+// Types come from the backend's OpenAPI spec (npm run gen:types), so a response
+// shape change on the server becomes a compile error here instead of a runtime
+// surprise for a user in crisis.
+type Schemas = components["schemas"];
+type SourceLink = Schemas["SourceLink"];
+type Program = Schemas["SupportProgram"];
+type Hotline = Schemas["Hotline"];
+type RegionRow = Schemas["RegionRow"];
 
-type ChecklistItem = { item: string; why?: string; deadline?: string };
-type Checklist = { label: string; urgent: ChecklistItem[]; items: ChecklistItem[]; sources?: SourceLink[] };
-type Stage = { id: string; title: string; desc: string; rights: string[]; tips: string };
-type DeadlineRule = {
-  id: string; label: string; from: string; hours?: number; days?: number;
-  months?: number; years?: number; urgency: string; desc: string;
-};
+type Checklist = Schemas["Checklist"];
+type Stage = Schemas["Stage"];
+type DeadlineRule = Schemas["DeadlineRule"];
 
 const EXAMPLES = [
   "폭행을 당했는데 증거를 어떻게 모아야 하나요?",

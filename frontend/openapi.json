@@ -1,0 +1,1228 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Legal-AI",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/chat": {
+      "post": {
+        "summary": "Chat",
+        "operationId": "chat_api_chat_post",
+        "parameters": [
+          {
+            "name": "x-anthropic-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Anthropic-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/summary": {
+      "post": {
+        "summary": "Summary",
+        "operationId": "summary_api_summary_post",
+        "parameters": [
+          {
+            "name": "x-anthropic-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Anthropic-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SummaryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/checklists": {
+      "get": {
+        "summary": "Checklists",
+        "operationId": "checklists_api_checklists_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Checklists Api Checklists Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/checklists/{crime_type}": {
+      "get": {
+        "summary": "Checklist",
+        "operationId": "checklist_api_checklists__crime_type__get",
+        "parameters": [
+          {
+            "name": "crime_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Crime Type"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Checklist"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/templates/{name}": {
+      "get": {
+        "summary": "Template",
+        "operationId": "template_api_templates__name__get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/support/questions": {
+      "get": {
+        "summary": "Support Questions",
+        "operationId": "support_questions_api_support_questions_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupportQuestionsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/support/match": {
+      "post": {
+        "summary": "Support Match",
+        "description": "Match answers to support programs. A program matches when every declared\ncriterion is satisfied; programs with no criteria always apply.",
+        "operationId": "support_match_api_support_match_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EligibilityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupportMatchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/centers": {
+      "get": {
+        "summary": "Centers",
+        "operationId": "centers_api_centers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CentersFile"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/glossary": {
+      "get": {
+        "summary": "Glossary",
+        "operationId": "glossary_api_glossary_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Glossary Api Glossary Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/feedback": {
+      "post": {
+        "summary": "Feedback",
+        "description": "Negative feedback becomes an eval candidate. Only the question text is\nkept — never the answer, and never anything the user typed about themselves\nbeyond the question they chose to send.",
+        "operationId": "feedback_api_feedback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Feedback"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/client-error": {
+      "post": {
+        "summary": "Client Error",
+        "description": "Frontend crash reports (no user content). Grep logs for client_error to\ncompute the crash-free session metric.",
+        "operationId": "client_error_api_client_error_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientError"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/procedure": {
+      "get": {
+        "summary": "Procedure",
+        "operationId": "procedure_api_procedure_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcedureFile"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/deadlines": {
+      "get": {
+        "summary": "Deadlines",
+        "operationId": "deadlines_api_deadlines_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeadlinesFile"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/livez": {
+      "get": {
+        "summary": "Livez",
+        "description": "Liveness: is the process running? (restart if this fails)",
+        "operationId": "livez_api_livez_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/readyz": {
+      "get": {
+        "summary": "Readyz",
+        "description": "Readiness: should this instance receive traffic? (data loaded, not draining)",
+        "operationId": "readyz_api_readyz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CentersFile": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceLink"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Sources"
+          },
+          "verified_on": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "title": "Verified On"
+          },
+          "hotlines": {
+            "items": {
+              "$ref": "#/components/schemas/Hotline"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Hotlines"
+          },
+          "regions": {
+            "items": {
+              "$ref": "#/components/schemas/RegionRow"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Regions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sources",
+          "verified_on",
+          "hotlines",
+          "regions"
+        ],
+        "title": "CentersFile"
+      },
+      "ChatRequest": {
+        "properties": {
+          "question": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Question"
+          },
+          "lang": {
+            "type": "string",
+            "enum": [
+              "ko",
+              "en",
+              "vi",
+              "zh"
+            ],
+            "title": "Lang",
+            "default": "ko"
+          },
+          "simple": {
+            "type": "boolean",
+            "title": "Simple",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "question"
+        ],
+        "title": "ChatRequest"
+      },
+      "Checklist": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Label"
+          },
+          "urgent": {
+            "items": {
+              "$ref": "#/components/schemas/ChecklistItem"
+            },
+            "type": "array",
+            "title": "Urgent",
+            "default": []
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ChecklistItem"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Items"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceLink"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Sources"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "items",
+          "sources"
+        ],
+        "title": "Checklist"
+      },
+      "ChecklistItem": {
+        "properties": {
+          "item": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Item"
+          },
+          "why": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Why"
+          },
+          "deadline": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline"
+          }
+        },
+        "type": "object",
+        "required": [
+          "item"
+        ],
+        "title": "ChecklistItem"
+      },
+      "ClientError": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "stack": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stack"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "ClientError"
+      },
+      "DeadlineRule": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "from": {
+            "type": "string",
+            "title": "From"
+          },
+          "hours": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hours"
+          },
+          "days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days"
+          },
+          "months": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Months"
+          },
+          "years": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Years"
+          },
+          "urgency": {
+            "type": "string",
+            "title": "Urgency"
+          },
+          "desc": {
+            "type": "string",
+            "title": "Desc"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "from",
+          "urgency",
+          "desc"
+        ],
+        "title": "DeadlineRule"
+      },
+      "DeadlinesFile": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceLink"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Sources"
+          },
+          "verified_on": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "title": "Verified On"
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/DeadlineRule"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Rules"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sources",
+          "verified_on",
+          "rules"
+        ],
+        "title": "DeadlinesFile"
+      },
+      "EligibilityRequest": {
+        "properties": {
+          "answers": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Answers"
+          }
+        },
+        "type": "object",
+        "title": "EligibilityRequest"
+      },
+      "Feedback": {
+        "properties": {
+          "helpful": {
+            "type": "boolean",
+            "title": "Helpful"
+          },
+          "question": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Question",
+            "default": ""
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Reason",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "helpful"
+        ],
+        "title": "Feedback"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Hotline": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "phone": {
+            "type": "string",
+            "pattern": "^[0-9\\-]+$",
+            "title": "Phone"
+          },
+          "hours": {
+            "type": "string",
+            "title": "Hours"
+          },
+          "for": {
+            "type": "string",
+            "title": "For"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "phone",
+          "hours",
+          "for"
+        ],
+        "title": "Hotline"
+      },
+      "ProcedureFile": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceLink"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Sources"
+          },
+          "verified_on": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "title": "Verified On"
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/Stage"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Stages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sources",
+          "verified_on",
+          "stages"
+        ],
+        "title": "ProcedureFile"
+      },
+      "RegionRow": {
+        "properties": {
+          "region": {
+            "type": "string",
+            "title": "Region"
+          },
+          "klac": {
+            "type": "string",
+            "title": "Klac"
+          },
+          "victim_center": {
+            "type": "string",
+            "title": "Victim Center"
+          },
+          "sunflower": {
+            "type": "string",
+            "title": "Sunflower"
+          }
+        },
+        "type": "object",
+        "required": [
+          "region",
+          "klac",
+          "victim_center",
+          "sunflower"
+        ],
+        "title": "RegionRow"
+      },
+      "SourceLink": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Label"
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "url"
+        ],
+        "title": "SourceLink"
+      },
+      "Stage": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "desc": {
+            "type": "string",
+            "title": "Desc"
+          },
+          "rights": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Rights",
+            "default": []
+          },
+          "tips": {
+            "type": "string",
+            "title": "Tips",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "desc"
+        ],
+        "title": "Stage"
+      },
+      "SummaryRequest": {
+        "properties": {
+          "messages": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Messages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "messages"
+        ],
+        "title": "SummaryRequest"
+      },
+      "SupportMatchResponse": {
+        "properties": {
+          "matched": {
+            "items": {
+              "$ref": "#/components/schemas/SupportProgram"
+            },
+            "type": "array",
+            "title": "Matched"
+          },
+          "others": {
+            "items": {
+              "$ref": "#/components/schemas/SupportProgram"
+            },
+            "type": "array",
+            "title": "Others"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes"
+          },
+          "disclaimer": {
+            "type": "string",
+            "title": "Disclaimer"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceLink"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "verified_on": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified On"
+          }
+        },
+        "type": "object",
+        "required": [
+          "matched",
+          "others",
+          "notes",
+          "disclaimer",
+          "sources"
+        ],
+        "title": "SupportMatchResponse"
+      },
+      "SupportOption": {
+        "properties": {
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value",
+          "label"
+        ],
+        "title": "SupportOption"
+      },
+      "SupportProgram": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "who": {
+            "type": "string",
+            "title": "Who"
+          },
+          "what": {
+            "type": "string",
+            "title": "What"
+          },
+          "how": {
+            "type": "string",
+            "title": "How"
+          },
+          "contact": {
+            "type": "string",
+            "title": "Contact"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceLink"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Sources"
+          },
+          "match": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Match",
+            "default": {}
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "who",
+          "what",
+          "how",
+          "contact",
+          "sources"
+        ],
+        "title": "SupportProgram"
+      },
+      "SupportQuestion": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/SupportOption"
+            },
+            "type": "array",
+            "minItems": 2,
+            "title": "Options"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "options"
+        ],
+        "title": "SupportQuestion"
+      },
+      "SupportQuestionsResponse": {
+        "properties": {
+          "note": {
+            "type": "string",
+            "title": "Note"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/SupportQuestion"
+            },
+            "type": "array",
+            "title": "Questions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "note",
+          "questions"
+        ],
+        "title": "SupportQuestionsResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

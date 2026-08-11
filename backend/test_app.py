@@ -122,6 +122,14 @@ def test_every_support_program_cites_a_source():
     assert data["sources"] and data["verified_on"]
 
 
+def test_templates_are_served(tmp_path):
+    """Regression guard: templates/*.md must ship in the Docker image."""
+    for name, expect in (("cctv", "CCTV"), ("complaint", "고소")):
+        body = client.get(f"/api/templates/{name}").json()
+        assert expect in body["content"]
+        assert body["name"].endswith(".md")
+
+
 def test_checklist_index_lists_only_crime_types():
     """Regression: adding `verified_on` to checklists.json made this endpoint
     500 (string indices...), which broke the whole 증거 체크리스트 feature."""

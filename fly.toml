@@ -1,0 +1,37 @@
+# Fly.io 배포 설정 (백엔드)
+#   fly launch --no-deploy      # 앱 생성 (이 파일을 그대로 사용)
+#   fly secrets set ANTHROPIC_API_KEY=sk-ant-...
+#   fly secrets set LEGAL_AI_ALLOWED_ORIGINS=https://<프론트 도메인>
+#   fly deploy
+
+app = "legal-ai-api"
+primary_region = "nrt"   # 도쿄 — 한국에서 가장 가까운 리전
+
+[build]
+
+[env]
+  PORT = "8000"
+  LEGAL_AI_RATE_LIMIT = "20"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "suspend"   # 트래픽 없을 때 정지 → 비용 절감
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 40
+    hard_limit = 80
+
+  [[http_service.checks]]
+    grace_period = "20s"
+    interval = "30s"
+    method = "GET"
+    timeout = "5s"
+    path = "/api/readyz"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

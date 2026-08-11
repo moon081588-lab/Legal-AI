@@ -43,6 +43,7 @@ from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from fastapi.responses import JSONResponse, StreamingResponse  # noqa: E402
 from pydantic import BaseModel, Field  # noqa: E402
 
+from backend import schemas  # noqa: E402
 from rag.answer import SYSTEM_PROMPT, build_user_prompt, option_instructions  # noqa: E402
 from rag.retrieve import Retriever  # noqa: E402
 from rag.verify import verify_citations  # noqa: E402
@@ -81,8 +82,20 @@ _state = {"ready": False, "shutting_down": False, "active_streams": 0}
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    # Data loads at import time; flip readiness only once that succeeded.
-    _state["ready"] = len(retriever.articles) > 0
+    # Data loads at import time; flip readiness only once that succeeded AND the
+    # data files match their schemas. Bad data means this instance never takes
+    # traffic (readiness stays 503) instead of 500-ing real users.
+    from backend.schemas import validate_data_files
+
+    data_ok = True
+    try:
+        counts = validate_data_files()
+        logger.info("data validated %s", counts)
+    except Exception as e:
+        data_ok = False
+        logger.error("data validation FAILED: %s", e)
+
+    _state["ready"] = data_ok and len(retriever.articles) > 0
     logger.info("startup ready=%s articles=%d", _state["ready"], len(retriever.articles))
     yield
     # Drain: stop accepting traffic, let in-flight streams finish so nobody
@@ -97,9 +110,15 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="Legal-AI", lifespan=lifespan)
+# Comma-separated origins, e.g. "https://legal-ai.vercel.app,http://localhost:3000".
+ALLOWED_ORIGINS = [
+    o.strip()
+    for o in os.environ.get("LEGAL_AI_ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+    if o.strip()
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -443,7 +462,7 @@ TEMPLATES_DIR = ROOT / "templates"
 META_KEYS = {"note", "sources", "verified_on"}
 
 
-@app.get("/api/checklists")
+@app.get("/api/checklists", response_model=dict[str, str])
 def checklists():
     return {
         k: v["label"]
@@ -452,7 +471,7 @@ def checklists():
     }
 
 
-@app.get("/api/checklists/{crime_type}")
+@app.get("/api/checklists/{crime_type}", response_model=schemas.Checklist)
 def checklist(crime_type: str):
     entry = CHECKLISTS.get(crime_type)
     if crime_type in META_KEYS or not isinstance(entry, dict) or "label" not in entry:
@@ -479,12 +498,12 @@ class EligibilityRequest(BaseModel):
     answers: dict = Field(default_factory=dict)
 
 
-@app.get("/api/support/questions")
+@app.get("/api/support/questions", response_model=schemas.SupportQuestionsResponse)
 def support_questions():
     return {"note": SUPPORT["note"], "questions": SUPPORT["questions"]}
 
 
-@app.post("/api/support/match")
+@app.post("/api/support/match", response_model=schemas.SupportMatchResponse)
 def support_match(req: EligibilityRequest):
     """Match answers to support programs. A program matches when every declared
     criterion is satisfied; programs with no criteria always apply."""
@@ -508,12 +527,12 @@ def support_match(req: EligibilityRequest):
     }
 
 
-@app.get("/api/centers")
+@app.get("/api/centers", response_model=schemas.CentersFile)
 def centers():
     return CENTERS
 
 
-@app.get("/api/glossary")
+@app.get("/api/glossary", response_model=dict[str, str])
 def glossary():
     return {k: v for k, v in GLOSSARY.items() if k not in META_KEYS and isinstance(v, str)}
 
@@ -558,12 +577,12 @@ def client_error(err: ClientError):
     return {"ok": True}
 
 
-@app.get("/api/procedure")
+@app.get("/api/procedure", response_model=schemas.ProcedureFile)
 def procedure():
     return PROCEDURE
 
 
-@app.get("/api/deadlines")
+@app.get("/api/deadlines", response_model=schemas.DeadlinesFile)
 def deadlines():
     return DEADLINES
 
