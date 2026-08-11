@@ -12,13 +12,16 @@
  */
 
 const CACHE = "legal-ai-v1";
-const SHELL = ["/", "/journal", "/manifest.webmanifest"];
+const SHELL = ["/", "/journal", "/glossary", "/manifest.webmanifest"];
 
 const CACHEABLE_API = [
   "/api/checklists",
   "/api/procedure",
   "/api/deadlines",
   "/api/templates/",
+  "/api/centers",
+  "/api/glossary",
+  "/api/support/questions",
 ];
 
 self.addEventListener("install", (event) => {

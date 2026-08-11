@@ -88,6 +88,62 @@ def test_retrieval_cache_returns_equal_results():
     assert r.search("전세 보증금", k=5)[0]["text"] != "mutated"
 
 
+def test_support_match_sexual_violence_gets_free_counsel():
+    r = client.post("/api/support/match", json={"answers": {"crime_type": "sexual", "harm": "minor"}})
+    ids = [p["id"] for p in r.json()["matched"]]
+    assert "victim_counsel" in ids   # 소득 무관 무료 국선변호사
+    assert "sunflower" in ids
+    assert "klac_consult" in ids     # 항상 안내되는 무료 상담
+
+
+def test_support_match_death_gets_compensation():
+    r = client.post("/api/support/match", json={"answers": {"harm": "death", "when": "recent"}})
+    matched = r.json()["matched"]
+    assert any(p["id"] == "compensation_death" for p in matched)
+    assert any("1577-2584" in p["contact"] for p in matched)
+
+
+def test_support_match_handles_empty_answers():
+    r = client.post("/api/support/match", json={"answers": {}})
+    assert r.status_code == 200
+    assert any(p["id"] == "klac_consult" for p in r.json()["matched"])
+
+
+def test_centers_and_glossary():
+    hot = client.get("/api/centers").json()["hotlines"]
+    assert any(h["phone"] == "112" for h in hot)
+    assert any(h["phone"] == "1366" for h in hot)
+    terms = client.get("/api/glossary").json()
+    assert "불송치" in terms and "증거보전" in terms
+
+
+def test_feedback_records_negative_as_eval_candidate(tmp_path, monkeypatch):
+    import backend.app as m
+
+    monkeypatch.setattr(m, "ROOT", tmp_path)
+    r = client.post("/api/feedback", json={"helpful": False, "question": "테스트 질문", "reason": "부정확"})
+    assert r.json()["ok"]
+    written = (tmp_path / "evals" / "candidates.jsonl").read_text(encoding="utf-8")
+    assert "테스트 질문" in written
+
+
+def test_positive_feedback_is_not_stored_as_candidate(tmp_path, monkeypatch):
+    import backend.app as m
+
+    monkeypatch.setattr(m, "ROOT", tmp_path)
+    client.post("/api/feedback", json={"helpful": True, "question": "좋은 답변"})
+    assert not (tmp_path / "evals" / "candidates.jsonl").exists()
+
+
+def test_triage_only_for_short_vague_questions():
+    from backend.app import triage_questions
+
+    assert triage_questions("사기당했어요")
+    assert not triage_questions(
+        "온라인 중고거래로 30만원을 송금했는데 물건을 받지 못했고 상대방이 연락을 끊었습니다"
+    )
+
+
 def test_procedure_and_deadlines_endpoints():
     stages = client.get("/api/procedure").json()["stages"]
     assert any("이의신청" in s["title"] for s in stages)

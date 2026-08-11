@@ -5,3 +5,4 @@ data/raw/
 node_modules/
 frontend/.next/
 .pytest_cache/
+evals/candidates.jsonl

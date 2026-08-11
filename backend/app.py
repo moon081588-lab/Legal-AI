@@ -223,6 +223,46 @@ DEGRADED_NOTICE = (
     "잠시 후 다시 시도해 주세요.\n"
 )
 
+# Vague openers → the follow-ups a real intake interview would ask.
+TRIAGE_RULES = [
+    (("사기", "속았", "돈을 보냈"), [
+        "온라인 거래였나요, 직접 만나서 이루어진 일인가요?",
+        "송금·이체를 하셨다면 언제, 어떤 방법으로 하셨나요?",
+        "상대방의 계좌번호나 연락처를 알고 계신가요?",
+    ]),
+    (("맞았", "폭행", "때렸"), [
+        "병원 진료를 받으셨나요? 진단서가 있으신가요?",
+        "사건이 발생한 장소 주변에 CCTV가 있었나요?",
+        "목격자가 있었나요?",
+    ]),
+    (("스토킹", "따라와", "계속 연락"), [
+        "언제부터 어느 정도 빈도로 반복되고 있나요?",
+        "연락 기록(문자·전화·메신저)을 보관하고 계신가요?",
+        "경찰에 신고하신 적이 있나요?",
+    ]),
+    (("해고", "잘렸", "짤렸"), [
+        "해고 통보를 언제, 어떤 방식(구두·서면)으로 받으셨나요?",
+        "근무 기간은 얼마나 되시나요?",
+    ]),
+    (("보증금", "전세", "월세"), [
+        "임대차 계약이 이미 종료되었나요?",
+        "전입신고와 확정일자를 받아 두셨나요?",
+    ]),
+]
+VAGUE_MAX_CHARS = 25
+
+
+def triage_questions(question: str) -> list[str]:
+    """Return clarifying questions only when the question is short and generic —
+    a detailed question should be answered, not interrogated."""
+    if len(question) > VAGUE_MAX_CHARS:
+        return []
+    for keywords, follow_ups in TRIAGE_RULES:
+        if any(k in question for k in keywords):
+            return follow_ups[:3]
+    return []
+
+
 _SENTINEL = object()
 
 
@@ -280,6 +320,12 @@ async def chat(req: ChatRequest, request: Request, x_anthropic_key: str | None =
             yield sse("done", {"ttft_ms": 0, "total_ms": int((time.monotonic() - t0) * 1000)})
             logger.info("chat route=out_of_scope total_ms=%d", (time.monotonic() - t0) * 1000)
             return
+
+        # Triage: a very vague question retrieves poorly. Ask for the one or two
+        # details that would actually change the answer, then still answer.
+        clarify = triage_questions(question)
+        if clarify:
+            yield sse("clarify", clarify)
 
         articles = await anyio.to_thread.run_sync(retriever.search, question, 5)
         yield sse("sources", [
@@ -411,6 +457,68 @@ def template(name: str):
 
 PROCEDURE = json.loads((ROOT / "data" / "procedure.json").read_text(encoding="utf-8"))
 DEADLINES = json.loads((ROOT / "data" / "deadlines.json").read_text(encoding="utf-8"))
+SUPPORT = json.loads((ROOT / "data" / "support.json").read_text(encoding="utf-8"))
+CENTERS = json.loads((ROOT / "data" / "centers.json").read_text(encoding="utf-8"))
+GLOSSARY = json.loads((ROOT / "data" / "glossary.json").read_text(encoding="utf-8"))
+
+
+class EligibilityRequest(BaseModel):
+    answers: dict = Field(default_factory=dict)
+
+
+@app.get("/api/support/questions")
+def support_questions():
+    return {"note": SUPPORT["note"], "questions": SUPPORT["questions"]}
+
+
+@app.post("/api/support/match")
+def support_match(req: EligibilityRequest):
+    """Match answers to support programs. A program matches when every declared
+    criterion is satisfied; programs with no criteria always apply."""
+    answers = {k: str(v) for k, v in req.answers.items() if isinstance(k, str)}
+    matched, others = [], []
+    for p in SUPPORT["programs"]:
+        rules = p.get("match", {})
+        ok = all(answers.get(field) in allowed for field, allowed in rules.items())
+        (matched if ok else others).append({k: v for k, v in p.items() if k != "match"})
+
+    notes = []
+    if answers.get("when") == "old" and any(p["id"].startswith("compensation") for p in SUPPORT["programs"]):
+        notes.append(SUPPORT["deadline_notice"]["compensation"])
+    return {"matched": matched, "others": others, "notes": notes, "disclaimer": SUPPORT["note"]}
+
+
+@app.get("/api/centers")
+def centers():
+    return CENTERS
+
+
+@app.get("/api/glossary")
+def glossary():
+    return GLOSSARY
+
+
+class Feedback(BaseModel):
+    helpful: bool
+    question: str = Field(default="", max_length=MAX_QUESTION_CHARS)
+    reason: str = Field(default="", max_length=500)
+
+
+@app.post("/api/feedback")
+def feedback(fb: Feedback):
+    """Negative feedback becomes an eval candidate. Only the question text is
+    kept — never the answer, and never anything the user typed about themselves
+    beyond the question they chose to send."""
+    logger.info("feedback helpful=%s reason=%r", fb.helpful, fb.reason[:200])
+    if not fb.helpful and fb.question.strip():
+        path = ROOT / "evals" / "candidates.jsonl"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(
+                {"question": fb.question.strip(), "reason": fb.reason.strip(),
+                 "expected_law": None, "expected_articles": []},
+                ensure_ascii=False) + "\n")
+    return {"ok": True}
 
 
 class ClientError(BaseModel):
