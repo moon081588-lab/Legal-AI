@@ -5,40 +5,88 @@
       "id": "crime_type",
       "label": "어떤 피해를 입으셨나요?",
       "options": [
-        { "value": "sexual", "label": "성폭력" },
-        { "value": "child", "label": "아동학대" },
-        { "value": "disabled", "label": "장애인학대" },
-        { "value": "stalking", "label": "스토킹" },
-        { "value": "trafficking", "label": "인신매매" },
-        { "value": "violent", "label": "폭행·상해 등 강력범죄" },
-        { "value": "other", "label": "그 밖의 피해 (사기, 재산범죄 등)" }
+        {
+          "value": "sexual",
+          "label": "성폭력"
+        },
+        {
+          "value": "child",
+          "label": "아동학대"
+        },
+        {
+          "value": "disabled",
+          "label": "장애인학대"
+        },
+        {
+          "value": "stalking",
+          "label": "스토킹"
+        },
+        {
+          "value": "trafficking",
+          "label": "인신매매"
+        },
+        {
+          "value": "violent",
+          "label": "폭행·상해 등 강력범죄"
+        },
+        {
+          "value": "other",
+          "label": "그 밖의 피해 (사기, 재산범죄 등)"
+        }
       ]
     },
     {
       "id": "harm",
       "label": "피해 정도가 어떠한가요?",
       "options": [
-        { "value": "death", "label": "가족이 사망하였습니다" },
-        { "value": "disability", "label": "장해가 남았습니다" },
-        { "value": "serious", "label": "2개월 이상 치료가 필요한 중상해입니다" },
-        { "value": "minor", "label": "그 밖의 피해입니다" }
+        {
+          "value": "death",
+          "label": "가족이 사망하였습니다"
+        },
+        {
+          "value": "disability",
+          "label": "장해가 남았습니다"
+        },
+        {
+          "value": "serious",
+          "label": "2개월 이상 치료가 필요한 중상해입니다"
+        },
+        {
+          "value": "minor",
+          "label": "그 밖의 피해입니다"
+        }
       ]
     },
     {
       "id": "income",
       "label": "가구 소득이 기준 중위소득 125% 이하인가요? (기초생활수급자·차상위계층·장애인·국가유공자 포함)",
       "options": [
-        { "value": "yes", "label": "예 또는 해당됩니다" },
-        { "value": "no", "label": "아니요" },
-        { "value": "unknown", "label": "잘 모르겠습니다" }
+        {
+          "value": "yes",
+          "label": "예 또는 해당됩니다"
+        },
+        {
+          "value": "no",
+          "label": "아니요"
+        },
+        {
+          "value": "unknown",
+          "label": "잘 모르겠습니다"
+        }
       ]
     },
     {
       "id": "when",
       "label": "피해가 발생한 시기는 언제인가요?",
       "options": [
-        { "value": "recent", "label": "3년 이내" },
-        { "value": "old", "label": "3년 이상 지났습니다" }
+        {
+          "value": "recent",
+          "label": "3년 이내"
+        },
+        {
+          "value": "old",
+          "label": "3년 이상 지났습니다"
+        }
       ]
     }
   ],
@@ -50,7 +98,25 @@
       "what": "수사 단계부터 재판까지 전 과정에서 진술 조력, 법률 상담, 보호조치 신청 등을 무료로 지원받습니다. 소득과 무관하게 지원됩니다.",
       "how": "경찰서·검찰청에 피해 신고를 하면서 구두 또는 서면으로 '피해자 국선변호사 지원'을 요청하세요. 성폭력피해상담소, 아동보호전문기관을 통해서도 요청할 수 있습니다.",
       "contact": "검찰청 피해자지원실 1577-2584 · 경찰 182",
-      "match": { "crime_type": ["sexual", "child", "disabled", "stalking", "trafficking"] }
+      "match": {
+        "crime_type": [
+          "sexual",
+          "child",
+          "disabled",
+          "stalking",
+          "trafficking"
+        ]
+      },
+      "sources": [
+        {
+          "label": "법무부 — 피해자 국선변호사 제도",
+          "url": "https://www.moj.go.kr/cvs/2717/subview.do"
+        },
+        {
+          "label": "정부24 — 피해자 국선변호사 지원",
+          "url": "https://www.gov.kr/portal/service/serviceInfo/127000000026"
+        }
+      ]
     },
     {
       "id": "klac_litigation",
@@ -59,7 +125,18 @@
       "what": "변호사 선임료 없이 소송대리 등 법률서비스를 지원받습니다.",
       "how": "가까운 법률구조공단 지부를 방문하거나 132로 전화해 상담을 신청하고, 소득 증빙 서류(건강보험료 납부확인서 등)를 준비하세요.",
       "contact": "국번없이 132 · klac.or.kr",
-      "match": { "income": ["yes", "unknown"] }
+      "match": {
+        "income": [
+          "yes",
+          "unknown"
+        ]
+      },
+      "sources": [
+        {
+          "label": "대한법률구조공단 — 구조대상 판단기준(중위소득 125%)",
+          "url": "https://www.klac.or.kr/legalstruct/guideTargetTypeView.do"
+        }
+      ]
     },
     {
       "id": "klac_consult",
@@ -68,7 +145,13 @@
       "what": "전화·방문·온라인으로 무료 법률상담을 받을 수 있습니다.",
       "how": "국번없이 132로 전화하거나 klac.or.kr에서 상담을 신청하세요. 상담 시 정리해 둔 자료를 가져가면 훨씬 도움이 됩니다(본 서비스의 '상담 준비 요약서' 활용).",
       "contact": "국번없이 132",
-      "match": {}
+      "match": {},
+      "sources": [
+        {
+          "label": "대한법률구조공단",
+          "url": "https://www.klac.or.kr/"
+        }
+      ]
     },
     {
       "id": "compensation_death",
@@ -77,7 +160,21 @@
       "what": "사망 당시 월급액·월실수입액 또는 평균임금의 28~48개월분이 지급됩니다. 2026년 3월 10일 시행 개정으로 강력범죄 사망 시 도시근로자 월평균임금 24개월분(약 8,200만 원)이 보장되도록 현실화되었습니다.",
       "how": "주소지 관할 지방검찰청 범죄피해자지원실에 신청하세요.",
       "contact": "검찰청 피해자지원실 1577-2584",
-      "match": { "harm": ["death"] }
+      "match": {
+        "harm": [
+          "death"
+        ]
+      },
+      "sources": [
+        {
+          "label": "법무부 — 범죄피해구조금 제도",
+          "url": "https://www.moj.go.kr/cvs/2719/subview.do"
+        },
+        {
+          "label": "찾기쉬운 생활법령 — 유족구조금",
+          "url": "https://easylaw.go.kr/CSP/CnpClsMain.laf?popMenu=ov&csmSeq=734&ccfNo=3&cciNo=2&cnpClsNo=1"
+        }
+      ]
     },
     {
       "id": "compensation_injury",
@@ -86,7 +183,22 @@
       "what": "장해구조금은 월급액·평균임금의 3~48개월분, 중상해구조금은 2~48개월분이 지급됩니다.",
       "how": "주소지 관할 지방검찰청 범죄피해자지원실에 신청하세요. 진단서·치료기록이 필요합니다.",
       "contact": "검찰청 피해자지원실 1577-2584",
-      "match": { "harm": ["disability", "serious"] }
+      "match": {
+        "harm": [
+          "disability",
+          "serious"
+        ]
+      },
+      "sources": [
+        {
+          "label": "찾기쉬운 생활법령 — 장해구조금 및 중상해구조금",
+          "url": "https://easylaw.go.kr/CSP/CnpClsMain.laf?ccfNo=3&cciNo=2&cnpClsNo=2&csmSeq=734&popMenu=ov"
+        },
+        {
+          "label": "법무부 — 범죄피해구조금 제도",
+          "url": "https://www.moj.go.kr/cvs/2719/subview.do"
+        }
+      ]
     },
     {
       "id": "victim_center",
@@ -95,7 +207,13 @@
       "what": "치료비, 생계비, 학자금, 장례비 등 경제적 지원과 심리치료, 법정 동행 등을 지원합니다.",
       "how": "1577-1295로 전화하면 가까운 센터로 연결됩니다.",
       "contact": "1577-1295",
-      "match": {}
+      "match": {},
+      "sources": [
+        {
+          "label": "법무부 범죄피해자 지원",
+          "url": "https://www.moj.go.kr/cvs/2711/subview.do"
+        }
+      ]
     },
     {
       "id": "sunflower",
@@ -104,10 +222,35 @@
       "what": "의료 지원, 증거 채취, 심리 상담, 법률 지원, 수사 연계를 한 곳에서 24시간 지원합니다.",
       "how": "여성긴급전화 1366으로 전화하거나 가까운 해바라기센터를 방문하세요. 증거 채취는 가능한 한 72시간 이내가 중요합니다.",
       "contact": "여성긴급전화 1366 (24시간)",
-      "match": { "crime_type": ["sexual"] }
+      "match": {
+        "crime_type": [
+          "sexual"
+        ]
+      },
+      "sources": [
+        {
+          "label": "찾기쉬운 생활법령 — 성폭력 피해자의 지원",
+          "url": "https://easylaw.go.kr/CSP/CnpClsMainBtr.laf?popMenu=ov&csmSeq=687&ccfNo=1&cciNo=4&cnpClsNo=4"
+        }
+      ]
     }
   ],
   "deadline_notice": {
     "compensation": "범죄피해구조금은 피해를 안 날부터 3년, 피해 발생일부터 10년이 지나면 신청할 수 없습니다. 시기가 지났더라도 정확한 판단은 검찰청 피해자지원실(1577-2584)에 확인해 주세요."
-  }
+  },
+  "sources": [
+    {
+      "label": "법무부 형사사법포털 — 범죄피해자 지원제도",
+      "url": "https://www.moj.go.kr/cvs/2711/subview.do"
+    },
+    {
+      "label": "대한법률구조공단",
+      "url": "https://www.klac.or.kr/"
+    },
+    {
+      "label": "찾기쉬운 생활법령정보 — 범죄피해자",
+      "url": "https://easylaw.go.kr/CSP/CnpClsMain.laf?popMenu=ov&csmSeq=734&ccfNo=3&cciNo=2&cnpClsNo=1"
+    }
+  ],
+  "verified_on": "2026-08-11"
 }

@@ -109,6 +109,26 @@ def test_support_match_handles_empty_answers():
     assert any(p["id"] == "klac_consult" for p in r.json()["matched"])
 
 
+def test_every_support_program_cites_a_source():
+    """User-facing legal/benefit claims must be verifiable — no unsourced advice."""
+    r = client.post("/api/support/match", json={"answers": {}})
+    data = r.json()
+    for p in data["matched"] + data["others"]:
+        assert p.get("sources"), f"{p['id']} 에 출처가 없습니다"
+        for s in p["sources"]:
+            assert s["url"].startswith("https://")
+    assert data["sources"] and data["verified_on"]
+
+
+def test_reference_datasets_carry_sources():
+    for path in ("/api/procedure", "/api/deadlines", "/api/centers"):
+        data = client.get(path).json()
+        assert data.get("sources"), f"{path} 에 출처가 없습니다"
+        assert data.get("verified_on"), f"{path} 에 확인일이 없습니다"
+    for crime in ("assault", "fraud", "stalking", "sexual"):
+        assert client.get(f"/api/checklists/{crime}").json().get("sources")
+
+
 def test_centers_and_glossary():
     hot = client.get("/api/centers").json()["hotlines"]
     assert any(h["phone"] == "112" for h in hot)

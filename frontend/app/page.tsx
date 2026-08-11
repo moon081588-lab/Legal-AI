@@ -24,12 +24,16 @@ type Message =
       rated?: boolean;
     };
 
-type Program = { id: string; title: string; who: string; what: string; how: string; contact: string };
+type SourceLink = { label: string; url: string };
+type Program = {
+  id: string; title: string; who: string; what: string; how: string;
+  contact: string; sources?: SourceLink[];
+};
 type Hotline = { name: string; phone: string; hours: string; for: string };
 type RegionRow = { region: string; klac: string; victim_center: string; sunflower: string };
 
 type ChecklistItem = { item: string; why?: string; deadline?: string };
-type Checklist = { label: string; urgent: ChecklistItem[]; items: ChecklistItem[] };
+type Checklist = { label: string; urgent: ChecklistItem[]; items: ChecklistItem[]; sources?: SourceLink[] };
 type Stage = { id: string; title: string; desc: string; rights: string[]; tips: string };
 type DeadlineRule = {
   id: string; label: string; from: string; hours?: number; days?: number;
@@ -48,6 +52,24 @@ const LANGS = [
 
 function quickExit() {
   window.location.replace("https://weather.naver.com");
+}
+
+/** Every claim shown to the user names where it came from, so anyone can verify
+ *  it themselves — the same principle as the 근거 조문 panel. */
+function Sources({ items, verified }: { items?: SourceLink[]; verified?: string }) {
+  if (!items || items.length === 0) return null;
+  return (
+    <div className="src">
+      출처:{" "}
+      {items.map((s, i) => (
+        <span key={s.url}>
+          {i > 0 && " · "}
+          <a href={s.url} target="_blank" rel="noreferrer">{s.label}</a>
+        </span>
+      ))}
+      {verified && <span className="verified-on"> · 확인일 {verified}</span>}
+    </div>
+  );
 }
 
 /** Memoized so streaming updates to the last message don't re-render history. */
@@ -161,24 +183,28 @@ export default function Home() {
   // ---- procedure navigator ----
   const [stages, setStages] = useState<Stage[]>([]);
   const [openStage, setOpenStage] = useState("");
+  const [procMeta, setProcMeta] = useState<{ sources?: SourceLink[]; verified_on?: string }>({});
 
   async function openProcedure() {
     if (panel === "procedure") { setPanel(""); return; }
     const r = await fetch("/api/procedure");
     const data = await r.json();
     setStages(data.stages);
+    setProcMeta({ sources: data.sources, verified_on: data.verified_on });
     setPanel("procedure");
   }
 
   // ---- deadline engine ----
   const [rules, setRules] = useState<DeadlineRule[]>([]);
   const [incidentDate, setIncidentDate] = useState("");
+  const [dlMeta, setDlMeta] = useState<{ sources?: SourceLink[]; verified_on?: string }>({});
 
   async function openDeadlines() {
     if (panel === "deadline") { setPanel(""); return; }
     const r = await fetch("/api/deadlines");
     const data = await r.json();
     setRules(data.rules);
+    setDlMeta({ sources: data.sources, verified_on: data.verified_on });
     setPanel("deadline");
   }
 
@@ -201,7 +227,10 @@ export default function Home() {
   >([]);
   const [supportAnswers, setSupportAnswers] = useState<Record<string, string>>({});
   const [supportResult, setSupportResult] = useState<
-    { matched: Program[]; others: Program[]; notes: string[]; disclaimer: string } | null
+    {
+      matched: Program[]; others: Program[]; notes: string[]; disclaimer: string;
+      sources?: SourceLink[]; verified_on?: string;
+    } | null
   >(null);
 
   async function openSupport() {
@@ -225,12 +254,14 @@ export default function Home() {
   const [hotlines, setHotlines] = useState<Hotline[]>([]);
   const [regions, setRegions] = useState<RegionRow[]>([]);
   const [region, setRegion] = useState("");
+  const [centerMeta, setCenterMeta] = useState<{ sources?: SourceLink[]; verified_on?: string }>({});
 
   async function openCenters() {
     if (panel === "centers") { setPanel(""); return; }
     const data = await (await fetch("/api/centers")).json();
     setHotlines(data.hotlines);
     setRegions(data.regions);
+    setCenterMeta({ sources: data.sources, verified_on: data.verified_on });
     setPanel("centers");
   }
 
@@ -430,6 +461,7 @@ export default function Home() {
                   <a href="/api/templates/cctv" target="_blank" rel="noreferrer">CCTV 보존요청서</a> ·{" "}
                   <a href="/api/templates/complaint" target="_blank" rel="noreferrer">고소장</a>
                 </div>
+                <Sources items={checklist.sources} />
               </div>
             )}
           </div>
@@ -466,6 +498,7 @@ export default function Home() {
                     <p>{p.what}</p>
                     <p><b>신청 방법:</b> {p.how}</p>
                     <p className="contact">📞 {p.contact}</p>
+                    <Sources items={p.sources} />
                   </div>
                 ))}
                 {supportResult.notes.map((n, i) => (
@@ -478,10 +511,12 @@ export default function Home() {
                       <b>{p.title}</b>
                       <p>{p.who}</p>
                       <p className="contact">📞 {p.contact}</p>
+                      <Sources items={p.sources} />
                     </div>
                   ))}
                 </details>
                 <p className="panel-note">{supportResult.disclaimer}</p>
+                <Sources items={supportResult.sources} verified={supportResult.verified_on} />
               </div>
             )}
           </div>
@@ -514,6 +549,7 @@ export default function Home() {
                 </div>
               );
             })()}
+            <Sources items={centerMeta.sources} verified={centerMeta.verified_on} />
           </div>
         )}
 
@@ -534,6 +570,7 @@ export default function Home() {
                 )}
               </div>
             ))}
+            <Sources items={procMeta.sources} verified={procMeta.verified_on} />
           </div>
         )}
 
@@ -580,6 +617,7 @@ export default function Home() {
                     </div>
                   );
                 })}
+                <Sources items={dlMeta.sources} verified={dlMeta.verified_on} />
               </div>
             )}
           </div>

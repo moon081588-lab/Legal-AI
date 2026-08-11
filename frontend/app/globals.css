@@ -37,6 +37,10 @@ body {
 .msg.user { align-self: flex-end; background: #2f6fed; color: #fff; border-bottom-right-radius: 4px; }
 .msg.bot { align-self: flex-start; background: #fff; border: 1px solid #e3e6ea; border-bottom-left-radius: 4px; }
 
+.src { margin-top: 8px; font-size: 11.5px; color: #778; line-height: 1.6; }
+.src a { color: #2f6fed; }
+.src .verified-on { color: #99a; }
+
 .settings-btn.highlight { background: #eaf3ff; border-color: #2f6fed; color: #1b4fbf; font-weight: 600; }
 
 .support-q { margin-top: 10px; }

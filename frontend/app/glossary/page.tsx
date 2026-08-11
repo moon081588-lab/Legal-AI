@@ -39,6 +39,11 @@ export default function Glossary() {
         <div className="notice">
           답변이나 서류에서 만나는 법률 용어를 쉬운 말로 풀어 설명합니다. 오프라인에서도 확인하실 수
           있습니다.
+          <div className="src">
+            출처:{" "}
+            <a href="https://www.law.go.kr/" target="_blank" rel="noreferrer">국가법령정보센터</a> ·{" "}
+            <a href="https://easylaw.go.kr/" target="_blank" rel="noreferrer">찾기쉬운 생활법령정보</a>
+          </div>
         </div>
         <input
           className="date-input"

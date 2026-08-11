@@ -485,7 +485,14 @@ def support_match(req: EligibilityRequest):
     notes = []
     if answers.get("when") == "old" and any(p["id"].startswith("compensation") for p in SUPPORT["programs"]):
         notes.append(SUPPORT["deadline_notice"]["compensation"])
-    return {"matched": matched, "others": others, "notes": notes, "disclaimer": SUPPORT["note"]}
+    return {
+        "matched": matched,
+        "others": others,
+        "notes": notes,
+        "disclaimer": SUPPORT["note"],
+        "sources": SUPPORT.get("sources", []),
+        "verified_on": SUPPORT.get("verified_on"),
+    }
 
 
 @app.get("/api/centers")
