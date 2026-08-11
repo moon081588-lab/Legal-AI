@@ -1,81 +1,150 @@
-# Legal-AI
+<div align="center">
 
-일반인을 위한 대한민국 생활법령 AI 도우미입니다. 일상적인 법률 질문을 쉬운 한국어로 답변하며, [국가법령정보 Open API](https://open.law.go.kr)에서 수집한 실제 법령을 근거로 조문 단위 출처를 함께 제시합니다.
+# ⚖️ Legal-AI
 
-**본 서비스는 법령 정보 안내 서비스이며, 법률 자문이 아닙니다.** 법령을 설명하고 근거 조문을 인용할 뿐, 소송 승패 예측·소송 전략·법원 제출 서면 작성은 제공하지 않습니다(변호사법 준수). 모든 답변은 AI 생성물임을 명시합니다(AI 기본법 준수).
+**법은 평등하지만, 법에 접근하는 비용은 평등하지 않습니다.**
 
-**판례 기반 답변.** 법령 조문뿐 아니라 실제 법원 판례를 함께 검색해 답변 근거로 사용합니다. 증거능력에 관한 핵심 대법원 판례(당사자 녹음 2001도3106, 위법수집증거 배제 2007도3061 전원합의체, 사인 수집 증거의 비교형량 2008도3990)가 샘플에 포함되어 있으며, `python ingest/fetch_precedents.py`로 국가법령정보 판례 API에서 실제 판례를 확대 수집할 수 있습니다(검색어는 `ingest/precedent_queries.txt`).
+변호사를 선임하기 어려운 사람들이 스스로 자신의 권리를 이해하고 행사할 수 있도록 돕는
+오픈소스 생활법령 AI 서비스입니다.
 
-**무료 지원 연결.** 많은 피해자가 자격이 있는데도 모르고 있는 제도를 안내합니다 — 성폭력·아동학대·스토킹 등은 소득과 무관하게 **피해자 국선변호사**를 무료로 지원받을 수 있고, 중위소득 125% 이하는 법률구조공단 무료 소송지원 대상이며, 사망·중상해 피해는 **범죄피해구조금** 대상입니다. 몇 가지 선택만으로 해당 제도를 확인할 수 있습니다(`data/support.json`).
+[![CI](https://github.com/moon081588-lab/Legal-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/moon081588-lab/Legal-AI/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+![Python](https://img.shields.io/badge/Python-3.12-3776AB)
+![Next.js](https://img.shields.io/badge/Next.js-14-000000)
 
-**중점 영역 — 범죄 피해자의 증거 확보.** 2026년 형사소송법 개정(검사 직접·보완수사 폐지, 10월 시행)으로 피해자가 스스로 증거를 확보해야 하는 부담이 커졌습니다. Legal-AI는 형사소송법·통신비밀보호법 등 관련 법령과 함께, 적법한 증거 확보·보존 방법을 안내하는 큐레이션 가이드(`data/guides/`)를 제공합니다. 불법적인 수집 방법(타인 간 대화 녹음, 무단 열람 등)은 안내하지 않으며, 오히려 그 위법성과 증거배제 원칙(형소법 제308조의2)을 경고하도록 설계되어 있습니다.
+[빠른 시작](#-빠른-시작) · [기능](#-무엇을-할-수-있나요) · [기여하기](#-함께해-주세요) · [배포](docs/deploy.md) · [설계](docs/architecture.md)
 
-전체 설계는 [docs/architecture.md](docs/architecture.md)를 참고해 주세요.
+</div>
 
-## 저장소 구성
+---
 
-```
-ingest/    law.go.kr에서 법령을 수집하여 조문 단위 JSONL로 변환
-rag/       조문 BM25 검색 + Claude 답변 생성
-backend/   FastAPI 앱: 스트리밍 /api/chat (SSE), 가드레일, 테스트
-frontend/  Next.js 채팅 UI (한국어, 스트리밍, 근거 조문 패널)
-cli.py     터미널에서 질문하기
-evals/     검색 정확도 평가
-data/      sample/에 개발용 샘플 데이터 포함 (즉시 실행 가능)
-```
+> [!IMPORTANT]
+> **본 서비스는 법령 정보 안내이며, 법률 자문이 아닙니다.**
+> 법령과 판례를 설명하고 근거를 인용할 뿐, 소송 승패 예측·소송 전략·법원 제출 서면 작성은 하지 않습니다(변호사법 준수). 모든 답변에는 AI 생성물임이 표시됩니다(AI 기본법 준수).
+> 구체적인 사안은 변호사 또는 **대한법률구조공단(국번없이 132)** 상담을 이용해 주세요.
 
-## 빠른 시작 (웹 앱)
+## 왜 만들었나
+
+2026년 형사소송법 개정(검사 직접·보완수사 폐지, 10월 시행)으로 **범죄 피해자가 스스로 증거를 확보해야 하는 부담**이 커졌습니다. 변호사를 선임할 여력이 있는 사람은 도움을 받지만, 그렇지 못한 사람은 무엇을 어떻게 해야 하는지조차 알기 어렵습니다.
+
+Legal-AI는 그 격차를 조금이라도 좁히기 위한 프로젝트입니다. 특히 **적법한 증거 확보 방법**과 **몰라서 못 받는 무료 지원 제도**를 안내하는 데 집중합니다.
+
+## ✨ 무엇을 할 수 있나요
+
+| 기능 | 설명 |
+|---|---|
+| 💬 **법령 질의응답** | 일상 언어로 물어보면 실제 법령·판례를 근거로 답변하고, **근거 조문 원문**을 함께 보여 줍니다. 인용이 근거와 일치하는지 자동 검증합니다. |
+| 🤝 **무료 지원 확인** | 몇 가지 선택만으로 받을 수 있는 제도를 안내합니다. 성폭력·아동학대·스토킹 등은 **소득과 무관하게 피해자 국선변호사**가 무료로 지원되고, 사망·중상해는 **범죄피해구조금** 대상입니다. |
+| 📋 **증거 체크리스트** | 폭행·사기·스토킹·성폭력별로 확보할 증거와 **긴급 기한**(CCTV 30일, 해바라기센터 72시간 등)을 안내합니다. |
+| 🧭 **절차 안내** | 신고 → 수사 → 송치/불송치 → **이의신청** → 검찰 → 공판. 피해자가 놓치기 쉬운 불송치 이의신청(형소법 제245조의7)을 강조합니다. |
+| ⏰ **기한 계산** | 사건 발생일을 넣으면 개인별 기한을 계산하고 `.ics` 파일로 **휴대폰 달력에 저장**할 수 있습니다. |
+| 📄 **상담 준비 요약서** | 대화 내용을 정리해 변호사·법률구조공단 상담에 가져갈 한 장짜리 문서로 만들어 줍니다. |
+| 📔 **증거 일지** | 반복되는 피해(스토킹 등)를 날짜별로 기록·사진 첨부. **기기에만 저장**되며 암호화 백업이 가능합니다. |
+| 📞 **지원기관 찾기** | 전국 상담 전화와 지역별 법률구조공단·해바라기센터·범죄피해자지원센터 연락처. |
+| 📖 **용어 사전** | 불송치, 증거보전, 대항력 등 법률 용어를 쉬운 말로 풀이합니다. |
+
+**피해자를 배려한 설계**: 위험 상황이 감지되면 법령 정보보다 **긴급 연락처(112·1366·109)를 먼저** 안내하고, 어느 화면에서든 **빠른 나가기** 버튼으로 즉시 벗어날 수 있습니다. 대화는 서버에 저장되지 않으며, 체크리스트·절차·서식·용어 사전은 **오프라인에서도** 열립니다. 다국어(한국어·English·Tiếng Việt·中文)와 쉬운 말 모드를 지원합니다.
+
+> [!NOTE]
+> **모든 정보에는 출처가 있습니다.** 화면에 표시되는 법령·제도·연락처는 국가법령정보센터, 법무부, 대한법률구조공단 등 원출처 링크와 확인일을 함께 보여 줍니다. 출처 없는 콘텐츠는 CI에서 차단됩니다.
+
+## 🚀 빠른 시작
 
 ```bash
+git clone https://github.com/moon081588-lab/Legal-AI.git
+cd Legal-AI
 pip install -r requirements.txt
 
-# 터미널 1 — 백엔드 (8000번 포트):
+# 터미널 1 — 백엔드
 uvicorn backend.app:app --reload --port 8000
 
-# 터미널 2 — 프론트엔드 (3000번 포트):
+# 터미널 2 — 프론트엔드
 cd frontend && npm install && npm run dev
 ```
 
-http://localhost:3000 을 열어 주세요. `ANTHROPIC_API_KEY`가 없으면 검색 전용 모드(관련 조문 원문 표시)로 동작하며, 백엔드 실행 전에 키를 설정하면 Claude가 조문을 인용한 답변을 생성합니다.
+http://localhost:3000 을 열어 주세요. **API 키 없이도 모든 기능이 동작합니다** (답변 생성 대신 관련 조문 원문을 보여 주는 모드). `ANTHROPIC_API_KEY`를 설정하거나 화면의 ⚙️ 버튼에서 키를 입력하면 AI 답변이 생성됩니다.
 
-## 배포
+### 실제 법령 데이터 넣기
 
-공개 배포 절차는 [docs/deploy.md](docs/deploy.md)에 단계별로 정리되어 있습니다 (백엔드 Fly.io, 프론트엔드 Vercel, 약 30분). 배포 후에는 반드시 연기 테스트를 실행하세요:
+저장소에는 개발용 샘플 조문만 들어 있습니다. 실제 법령으로 교체하려면:
 
 ```bash
-./scripts/smoke.sh https://<배포된-백엔드-주소>
+export LAW_GO_KR_OC=본인아이디        # open.law.go.kr 무료 가입 (이메일 @ 앞부분)
+python ingest/fetch_laws.py           # ingest/laws.txt 의 법령 수집
+python ingest/parse_laws.py
+python ingest/fetch_precedents.py     # 판례 수집
+python scripts/validate_data.py       # 데이터 검사
 ```
 
-## CLI / 테스트
+> [!WARNING]
+> `data/sample/`은 수작업으로 만든 개발용 데이터로 최신 법령과 다를 수 있습니다. **공개 서비스에는 반드시 API로 수집한 데이터를 사용하세요.** GitHub Secrets에 `LAW_GO_KR_OC`를 등록하면 매주 자동 갱신됩니다.
+
+## 🏗 구조
+
+```
+backend/    FastAPI — /api/chat(SSE 스트리밍), 지원제도·체크리스트·절차 API, 스키마
+rag/        BM25 검색 · 프롬프트 · 인용 검증
+ingest/     law.go.kr 수집 · 검증 · 스냅샷/롤백
+data/       법령·판례·가이드·지원제도·연락처 (모두 출처 포함)
+frontend/   Next.js 채팅 UI · 증거 일지 · 용어 사전 (PWA)
+templates/  고소장 · CCTV 보존요청서 서식
+scripts/    데이터 검증 · OpenAPI 덤프 · 배포 연기 테스트
+evals/      검색 정확도 평가 (CI 차단 게이트)
+```
+
+## 🧪 개발
 
 ```bash
-python cli.py "전세 보증금을 못 돌려받고 있어요"
-python scripts/validate_data.py       # 데이터 스키마 검사
-python -m pytest backend/ -q          # 백엔드 테스트
-python evals/run_evals.py             # 검색 정확도 (실패 시 exit 1)
-cd frontend && npm test               # 프론트 단위 테스트
-cd frontend && npm run e2e            # E2E (Playwright)
+python scripts/validate_data.py    # 데이터 스키마 검사
+python -m pytest backend/ -q       # 백엔드 + 카오스 테스트
+python evals/run_evals.py          # 검색 정확도 (Recall@5, 실패 시 exit 1)
+cd frontend && npm test            # 단위 테스트
+cd frontend && npm run e2e         # E2E (Playwright)
 
-# 백엔드 응답 모양을 바꿨다면 타입을 다시 생성해 커밋하세요 (CI가 검사합니다)
+# 백엔드 응답 모양을 바꿨다면 타입 재생성 후 커밋 (CI가 검사)
 python scripts/dump_openapi.py && npm --prefix frontend run gen:types
 ```
 
-품질 지표와 측정 방법은 [docs/stability.md](docs/stability.md), 장애 대응 절차는 [docs/runbook.md](docs/runbook.md)에 있습니다. 모든 PR은 CI에서 백엔드 테스트·카오스 테스트·검색 평가·타입 검사·빌드·E2E를 통과해야 합니다.
+모든 PR은 CI에서 **데이터 검증 · 백엔드/카오스 테스트 · 검색 평가 · 타입 계약 · 빌드 · E2E**를 통과해야 합니다. 품질 지표는 [docs/stability.md](docs/stability.md), 장애 대응은 [docs/runbook.md](docs/runbook.md)를 참고하세요.
 
-주요 내구성 장치: 수집 데이터 검증·스냅샷·롤백(`python ingest/rollback.py`), 모델 API 장애 시 조문 원문 답변으로 자동 전환, 증거 일지 IndexedDB 저장 + 암호화 백업, 오프라인(서비스 워커) 지원.
+## 📚 문서
 
-## 실제 법령 수집
+| 문서 | 내용 |
+|---|---|
+| [docs/architecture.md](docs/architecture.md) | 전체 설계, 법적 제약, 데이터 파이프라인 |
+| [docs/deploy.md](docs/deploy.md) | 공개 배포 절차 (Fly.io + Vercel, 약 30분) |
+| [docs/stability.md](docs/stability.md) | 안정성·내구성 지표와 측정 방법 |
+| [docs/runbook.md](docs/runbook.md) | 장애 대응 절차 |
+| [docs/legal-review.md](docs/legal-review.md) | **변호사 검토 요청서** — 검토가 필요한 항목 정리 |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | 기여 방법과 원칙 |
 
-1. [open.law.go.kr](https://open.law.go.kr)에서 무료 회원가입을 해주세요. OC 값은 이메일의 `@` 앞부분입니다.
-2. ```bash
-   export LAW_GO_KR_OC=본인아이디
-   python ingest/fetch_laws.py      # ingest/laws.txt에 적힌 법령 다운로드
-   python ingest/parse_laws.py      # -> data/articles.jsonl 생성 (샘플보다 우선 사용됨)
-   ```
-3. 법령을 추가하려면 `ingest/laws.txt`에 정식 법령명을 한 줄씩 적어 주세요.
+## 🙌 함께해 주세요
 
-⚠️ `data/sample/`은 수작업으로 만든 개발용 데이터로, 최신 법령과 다를 수 있습니다. 실제 서비스에는 반드시 API로 수집한 데이터를 사용해 주세요.
+**법률 도움이 절실한 사람을 돕는 프로젝트입니다. 기여해 주실 수 있다면 부디 함께해 주세요.**
 
-## 로드맵
+코딩을 하지 않아도 기여할 수 있습니다:
 
-1단계(완료): FastAPI 백엔드 + Next.js 채팅 UI. 2단계: 판례·법령해석례 추가, pgvector 하이브리드 검색, 평가 강화. 3단계: 계정, 피드백 수집, 리걸테크 진흥법 입법 동향에 따른 수익화 검토. 상세 내용은 `docs/architecture.md`에 있습니다.
+- ⚖️ **변호사·법학 전공자** — [docs/legal-review.md](docs/legal-review.md)의 항목을 검토해 주세요. 가장 절실한 도움입니다.
+- 📝 **법령·판례 추가** — `ingest/laws.txt`, `ingest/precedent_queries.txt`에 한 줄 추가
+- 🗣 **평가 질문 추가** — `evals/questions.jsonl`에 실제 사람들이 물어볼 질문 추가
+- 💬 **구어체 사전 확장** — `rag/retrieve.py`의 `QUERY_SYNONYMS` (예: "퇴사"→"퇴직")
+- 💻 **개발** — 카카오톡 채널 연동, pgvector 하이브리드 검색, 모바일 UI, 접근성 개선
+
+자세한 내용은 [CONTRIBUTING.md](CONTRIBUTING.md)에 있습니다. 이슈·PR·아이디어 무엇이든 환영합니다.
+
+## 📄 라이선스
+
+[MIT](LICENSE) — 자유롭게 사용·수정·배포하실 수 있습니다. 이 코드가 누군가에게 도움이 된다면 그것으로 충분합니다.
+
+---
+
+<div align="center">
+
+### 지금 도움이 필요하시다면
+
+**경찰 112** · **여성긴급전화 1366** · **자살예방 상담 109**
+**대한법률구조공단 132** · **범죄피해자지원센터 1577-1295**
+
+*이 저장소의 코드가 아니라, 위 번호가 지금 당신을 도울 수 있습니다.*
+
+</div>
