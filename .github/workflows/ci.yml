@@ -15,6 +15,11 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: 환경 정보 (실패 진단용)
+        run: |
+          python -V
+          python -c "import time; print('monotonic(uptime):', round(time.monotonic()))"
+          pip list
       - name: 백엔드 테스트
         run: python -m pytest backend/ -q
       - name: 검색 평가 게이트 (Recall@5 = 100%)

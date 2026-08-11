@@ -186,11 +186,13 @@ class CircuitBreaker:
         self.threshold = threshold
         self.cooldown_s = cooldown_s
         self.failures = 0
-        self.opened_at = 0.0
+        # None means "never opened". Must not be 0.0: time.monotonic() counts from
+        # boot, so on a freshly started machine 0.0 reads as "opened just now".
+        self.opened_at: float | None = None
 
     @property
     def is_open(self) -> bool:
-        if self.failures < self.threshold:
+        if self.failures < self.threshold or self.opened_at is None:
             return False
         if time.monotonic() - self.opened_at > self.cooldown_s:
             self.reset()  # half-open: allow one probe request through
@@ -210,7 +212,7 @@ class CircuitBreaker:
 
     def reset(self) -> None:
         self.failures = 0
-        self.opened_at = 0.0
+        self.opened_at = None
 
     def state(self) -> str:
         return "open" if self.is_open else ("degraded" if self.failures else "closed")

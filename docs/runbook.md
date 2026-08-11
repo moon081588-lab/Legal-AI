@@ -110,7 +110,15 @@ cd frontend && npm ci && npm run build && npm start
 
 ---
 
-## 8. CI의 e2e 잡이 실패
+## 8. CI의 backend 잡이 간헐적으로 실패
+
+같은 코드인데 어떤 실행은 통과하고 어떤 실행은 실패한다면 **시간·전역 상태 의존 테스트**를 의심하세요.
+
+- `time.monotonic()`은 **부팅 이후 경과 시간**입니다. CI 러너는 매번 새 VM이라 값이 작습니다(수십 초). 테스트에서 `opened_at = 0.0` 같은 절대값을 쓰면 "방금 열림"으로 해석되어 간헐적으로 실패합니다. 항상 `time.monotonic() - N` 형태의 상대값을 쓰세요.
+- 회로 차단기·속도 제한 카운터는 프로세스 전역입니다. `backend/conftest.py`의 autouse 픽스처가 매 테스트마다 초기화합니다. 새 전역 상태를 추가하면 이 픽스처에도 추가하세요.
+- CI의 "환경 정보" 스텝에서 `monotonic(uptime)` 값과 설치된 패키지 버전을 확인할 수 있습니다.
+
+## 9. CI의 e2e 잡이 실패
 
 1. Actions 실행 화면에서 **playwright-report** 아티팩트를 내려받아 실패 스크린샷·trace를 확인하세요.
 2. 로컬 재현: `cd frontend && npx playwright install chromium && npm run e2e`

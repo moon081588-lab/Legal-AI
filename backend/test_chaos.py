@@ -5,6 +5,7 @@
 
 import json
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -25,13 +26,6 @@ def _text(resp):
     return "".join(
         line[6:] for line in resp.text.splitlines() if line.startswith("data: ")
     )
-
-
-@pytest.fixture(autouse=True)
-def _reset_breaker():
-    app_module.breaker.reset()
-    yield
-    app_module.breaker.reset()
 
 
 # ---------- model API failures ----------
@@ -66,10 +60,31 @@ def test_repeated_failures_open_breaker(monkeypatch):
     assert client.get("/api/readyz").json()["breaker"] == "open"
 
 
-def test_breaker_recovers_after_cooldown(monkeypatch):
-    app_module.breaker.failures = 3
-    app_module.breaker.opened_at = 0.0  # long past → half-open
-    assert not app_module.breaker.is_open
+def test_breaker_recovers_after_cooldown():
+    b = app_module.breaker
+    b.failures = b.threshold
+    # Relative to now, never an absolute value: time.monotonic() counts from boot,
+    # so a literal like 0.0 means "just now" on a freshly booted CI runner.
+    b.opened_at = time.monotonic() - (b.cooldown_s + 1)
+    assert not b.is_open          # half-open
+    assert b.failures == 0        # ...and reset for the next probe
+
+
+def test_breaker_stays_open_during_cooldown():
+    b = app_module.breaker
+    b.failures = b.threshold
+    b.opened_at = time.monotonic()
+    assert b.is_open
+
+
+def test_breaker_is_closed_when_never_opened():
+    """Regression: opened_at must not default to 0.0 — on a machine whose uptime
+    is under the cooldown that would read as 'opened just now'."""
+    b = app_module.breaker
+    b.reset()
+    assert b.opened_at is None
+    b.failures = b.threshold  # failures without a recorded open time
+    assert not b.is_open
 
 
 # ---------- retrieval failures ----------
