@@ -12,7 +12,7 @@
 | 프론트 단위 테스트 | 100% 통과 | `npm test` (vitest) | ✅ 차단 |
 | `app/lib` 커버리지 | ≥70% lines/functions | `npx vitest run --coverage` | ⚠️ 임계값 설정됨 |
 | 타입 오류 | 0건 | `npm run build` (tsc 포함) | ✅ 차단 |
-| E2E 시나리오 | 5/5 통과 | `npm run e2e` (Playwright) | ✅ 차단 |
+| E2E 시나리오 | 11/11 통과 | `npm run e2e` (Playwright, 프로덕션 빌드 기준) | ✅ 차단 |
 | 접근성 점수 | ≥0.9 | Lighthouse CI | ⚠️ 리포트 (안정화 후 차단) |
 | 성능 점수 / TTI / CLS | ≥0.85 / <4s / <0.1 | Lighthouse CI (`lighthouserc.json`) | ⚠️ 리포트 |
 | 부하 시 오류율 | <1% @ 50 VU | `k6 run tests/load/k6_chat.js` | 수동 (릴리스 전) |
@@ -34,7 +34,7 @@ npm ci
 npm test                    # 단위 테스트 (SSE 파서)
 npx vitest run --coverage   # 커버리지
 npm run build               # 타입 검사 + 빌드
-npm run e2e                 # E2E (백엔드·프론트 자동 기동)
+npm run e2e                 # E2E (백엔드·프론트 자동 기동, 프로덕션 빌드 사용)
 
 # 부하 테스트 (백엔드 실행 중일 때)
 k6 run tests/load/k6_chat.js

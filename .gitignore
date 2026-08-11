@@ -6,3 +6,6 @@ node_modules/
 frontend/.next/
 .pytest_cache/
 evals/candidates.jsonl
+frontend/playwright-report/
+frontend/test-results/
+frontend/tsconfig.tsbuildinfo
