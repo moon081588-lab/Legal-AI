@@ -3,6 +3,8 @@
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from fastapi.testclient import TestClient
@@ -118,6 +120,41 @@ def test_every_support_program_cites_a_source():
         for s in p["sources"]:
             assert s["url"].startswith("https://")
     assert data["sources"] and data["verified_on"]
+
+
+def test_checklist_index_lists_only_crime_types():
+    """Regression: adding `verified_on` to checklists.json made this endpoint
+    500 (string indices...), which broke the whole 증거 체크리스트 feature."""
+    r = client.get("/api/checklists")
+    assert r.status_code == 200
+    listed = r.json()
+    assert set(listed) == {"assault", "fraud", "stalking", "sexual"}
+    assert "verified_on" not in listed and "sources" not in listed
+    assert all(isinstance(v, str) for v in listed.values())
+
+
+def test_every_listed_checklist_is_fetchable():
+    """The index and detail endpoints must agree — that pairing is what broke."""
+    for crime in client.get("/api/checklists").json():
+        detail = client.get(f"/api/checklists/{crime}")
+        assert detail.status_code == 200, crime
+        assert detail.json()["label"]
+        assert detail.json()["items"]
+
+
+@pytest.mark.parametrize("bad", ["verified_on", "sources", "note", "does_not_exist"])
+def test_metadata_keys_are_not_valid_checklists(bad):
+    assert client.get(f"/api/checklists/{bad}").status_code == 404
+
+
+def test_glossary_excludes_metadata_keys(monkeypatch):
+    import backend.app as m
+
+    monkeypatch.setitem(m.GLOSSARY, "verified_on", "2026-08-11")
+    monkeypatch.setitem(m.GLOSSARY, "sources", [{"label": "x", "url": "https://x"}])
+    terms = client.get("/api/glossary").json()
+    assert "verified_on" not in terms and "sources" not in terms
+    assert "불송치" in terms
 
 
 def test_reference_datasets_carry_sources():

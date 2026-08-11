@@ -437,16 +437,27 @@ CHECKLISTS = json.loads((ROOT / "data" / "checklists.json").read_text(encoding="
 TEMPLATES_DIR = ROOT / "templates"
 
 
+# Data files carry provenance metadata alongside their content. Never treat these
+# top-level keys as content — doing so crashed /api/checklists once `verified_on`
+# was added, taking the whole 증거 체크리스트 feature down.
+META_KEYS = {"note", "sources", "verified_on"}
+
+
 @app.get("/api/checklists")
 def checklists():
-    return {k: v["label"] for k, v in CHECKLISTS.items()}
+    return {
+        k: v["label"]
+        for k, v in CHECKLISTS.items()
+        if k not in META_KEYS and isinstance(v, dict) and "label" in v
+    }
 
 
 @app.get("/api/checklists/{crime_type}")
 def checklist(crime_type: str):
-    if crime_type not in CHECKLISTS:
-        return {"error": "unknown crime type"}
-    return CHECKLISTS[crime_type]
+    entry = CHECKLISTS.get(crime_type)
+    if crime_type in META_KEYS or not isinstance(entry, dict) or "label" not in entry:
+        return JSONResponse(status_code=404, content={"error": "unknown crime type"})
+    return entry
 
 
 @app.get("/api/templates/{name}")
@@ -504,7 +515,7 @@ def centers():
 
 @app.get("/api/glossary")
 def glossary():
-    return GLOSSARY
+    return {k: v for k, v in GLOSSARY.items() if k not in META_KEYS and isinstance(v, str)}
 
 
 class Feedback(BaseModel):
