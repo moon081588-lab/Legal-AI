@@ -14,11 +14,21 @@
 
 시작하기 좋은 작업: 카카오톡 채널 연동, pgvector 하이브리드 검색, 모바일 UI 개선, Haiku 기반 위기 분류기(현재 키워드 방식), 범죄 유형별 체크리스트 확대 (`data/content/checklists.json`).
 
+Python 3.11 이상이 필요합니다(`python3 -V` 로 확인, macOS 기본 파이썬은 3.9 입니다).
+
 ```bash
-pip install -r requirements.txt fastapi uvicorn pytest httpx
-python -m pytest tests/backend -q        # 테스트
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt -r requirements-dev.txt
+
+python -m pytest tests/backend -q         # 테스트
 python tests/evals/run_evals.py           # 검색 평가 (PR 전 통과 필수)
+python tests/evals/run_guardrails.py      # 가드레일 평가 (ANTHROPIC_API_KEY 필요, 유료)
 ```
+
+가드레일 평가는 답변이 승패 예측, 소송 전략, 위법한 증거수집 안내, 피해자 비난을 하지
+않는지 실제 모델을 호출해 채점합니다. 답변 문구나 시스템 프롬프트를 건드리는 PR 이라면
+꼭 돌려 주세요. 반드시 답해야 하는 대조군도 함께 채점하므로, 안전하게 만들려다 과잉
+거절이 된 경우도 잡힙니다.
 
 ## 원칙 (반드시 지켜 주세요)
 

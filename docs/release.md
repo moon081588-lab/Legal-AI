@@ -24,14 +24,20 @@
 ### 1. 준비 확인
 
 ```bash
-python tools/validate_data.py       # 데이터 스키마
-python -m pytest tests/backend -q   # 백엔드·카오스 테스트
-python tests/evals/run_evals.py     # 검색 정확도
+python tools/validate_data.py         # 데이터 스키마
+python -m pytest tests/backend -q     # 백엔드·카오스 테스트
+python tests/evals/run_evals.py       # 검색 정확도
+python tests/evals/run_guardrails.py  # 답변 가드레일 (ANTHROPIC_API_KEY 필요)
 cd frontend && npm test && npm run build && npm run e2e
 ```
 
 - [ ] CI가 초록색인가
 - [ ] `data/corpus/`가 **실제 수집 데이터**인가 (샘플로 릴리스하지 마세요)
+      → `curl <배포주소>/api/health` 의 `corpus` 값이 `"real"` 이어야 합니다.
+      `"sample"` 이면 `LEGAL_AI_ENV=production` 인 인스턴스는 아예 기동하지 않습니다.
+- [ ] 가드레일 평가가 전부 통과했는가, 특히 **대조군**이 통과했는가
+      (대조군 실패는 과잉 거절 신호입니다. 도움이 필요한 사람을 빈손으로 돌려보내는
+      실패는 지표에 잘 드러나지 않으니 직접 확인하세요.)
 - [ ] 새로 추가한 안내 콘텐츠에 출처와 확인일이 있는가
 - [ ] 배포 중이라면 `./tools/smoke.sh <배포주소>` 통과
 

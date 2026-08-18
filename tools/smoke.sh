@@ -44,6 +44,19 @@ check "용어 사전"        "/api/glossary"           '불송치'
 check "서식(CCTV)"       "/api/templates/cctv"     'CCTV'
 check "서식(고소장)"      "/api/templates/complaint" '고소'
 
+# 가장 중요한 검사: 배포된 인스턴스가 진짜 법령을 서비스하고 있는가.
+# 샘플은 개발용으로 손으로 쓴 가짜 조문이며, 이걸 피해자에게 법이라고 보여 주는 것이
+# 이 서비스의 최악의 실패입니다. 파일 이름은 둘 다 articles.jsonl 이라 구분되지 않으므로
+# 반드시 corpus 값으로 확인합니다.
+CORPUS=$(curl -sS -m 20 "$BASE/api/health" 2>&1)
+if printf '%s' "$CORPUS" | grep -q '"corpus":"real"'; then
+  pass "실제 법령 데이터"
+elif printf '%s' "$CORPUS" | grep -q '"corpus":"sample"'; then
+  fail "실제 법령 데이터" "샘플 데이터를 서비스 중입니다. 즉시 롤백하고 법령을 수집하세요 (tools/ingest/fetch_laws.py)"
+else
+  fail "실제 법령 데이터" "/api/health 에 corpus 값이 없습니다(구버전 배포?): $(printf '%s' "$CORPUS" | head -c 160)"
+fi
+
 # 메타데이터 키가 콘텐츠로 새어 나오지 않는지 (과거 500 원인)
 if curl -sS -m 20 "$BASE/api/checklists" | grep -q "verified_on"; then
   fail "메타데이터 누출" "/api/checklists 응답에 verified_on 이 포함됨"

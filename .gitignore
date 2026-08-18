@@ -1,7 +1,12 @@
 __pycache__/
 *.pyc
+.venv/
+venv/
 .env
 data/corpus/raw/
+# 임베딩 캐시는 말뭉치에서 다시 만들 수 있고 수십 MB라 커밋하지 않습니다.
+data/corpus/embeddings.npy
+data/corpus/embeddings.meta.json
 node_modules/
 frontend/.next/
 .pytest_cache/

@@ -50,10 +50,16 @@ Legal-AI는 그 격차를 조금이라도 좁히기 위한 프로젝트입니다
 
 ## 🚀 빠른 시작
 
+**Python 3.11 이상**과 Node 20 이상이 필요합니다. macOS 에 기본 설치된 파이썬은 3.9 라
+`python3 -V` 로 먼저 확인하시고, 낮으면 `brew install python@3.12` 로 설치해 주세요.
+
 ```bash
 git clone https://github.com/moon081588-lab/Legal-AI.git
 cd Legal-AI
-pip install -r requirements.txt
+
+python3 -m venv .venv          # 가상환경 (macOS·리눅스에는 python 이 없고 python3 만 있습니다)
+source .venv/bin/activate      # Windows: .venv\Scripts\activate
+pip install -r requirements.txt -r requirements-dev.txt
 
 # 터미널 1 — 백엔드
 uvicorn backend.app:app --reload --port 8000
@@ -61,6 +67,10 @@ uvicorn backend.app:app --reload --port 8000
 # 터미널 2 — 프론트엔드
 cd frontend && npm install && npm run dev
 ```
+
+> [!TIP]
+> 아래 문서의 `python ...` 명령은 모두 가상환경을 활성화한 상태(`source .venv/bin/activate`)를
+> 전제로 합니다. 활성화하지 않았다면 `python` 대신 `python3` 를 쓰세요.
 
 http://localhost:3000 을 열어 주세요. **API 키 없이도 모든 기능이 동작합니다** (답변 생성 대신 관련 조문 원문을 보여 주는 모드). `ANTHROPIC_API_KEY`를 설정하거나 화면의 ⚙️ 버튼에서 키를 입력하면 AI 답변이 생성됩니다.
 

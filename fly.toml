@@ -12,6 +12,9 @@ primary_region = "nrt"   # 도쿄 — 한국에서 가장 가까운 리전
 [env]
   PORT = "8000"
   LEGAL_AI_RATE_LIMIT = "20"
+  # production 이면 샘플 법령 데이터로는 기동하지 않습니다(backend/app.py 안전장치).
+  # 실제 이용자에게 가짜 조문이 나가는 것을 막는 장치이므로 바꾸지 마세요.
+  LEGAL_AI_ENV = "production"
 
 [http_service]
   internal_port = 8000

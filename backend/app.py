@@ -77,6 +77,36 @@ OUT_OF_SCOPE_MESSAGE = (
     "무료 상담: 대한법률구조공단 국번없이 132 (klac.or.kr)\n\n" + DISCLAIMER
 )
 
+# 샘플 말뭉치 안전장치.
+#
+# data/corpus/sample/ 은 개발용으로 손으로 쓴 가짜 조문입니다. 실제 데이터를 아직
+# 수집하지 않았다면 Retriever 가 조용히 이 샘플로 대체되는데, 그 상태로 배포하면
+# 범죄 피해자에게 존재하지 않는 법을 법이라고 보여 주게 됩니다. 이 프로젝트에서
+# 일어날 수 있는 가장 나쁜 일이므로, 개발 환경이 아니면 아예 기동하지 않습니다.
+DEV_ENVS = {"development", "dev", "local", "test", "ci"}
+LEGAL_AI_ENV = os.environ.get("LEGAL_AI_ENV", "development").strip().lower()
+
+
+class SampleCorpusError(RuntimeError):
+    """Raised at startup when a non-development instance would serve fixture data."""
+
+
+def assert_corpus_releasable(corpus_mode: str, env: str) -> None:
+    if corpus_mode != "sample" or env in DEV_ENVS:
+        return
+    raise SampleCorpusError(
+        f"샘플 법령 데이터로는 기동할 수 없습니다 (LEGAL_AI_ENV={env}).\n"
+        "지금 적재된 조문은 data/corpus/sample/ 의 개발용 가짜 데이터입니다.\n\n"
+        "해결 방법:\n"
+        "  1) 실제 법령을 수집하세요\n"
+        "     export LAW_GO_KR_OC=<open.law.go.kr 가입 아이디>\n"
+        "     python tools/ingest/fetch_laws.py && python tools/ingest/parse_laws.py\n"
+        "     python tools/ingest/fetch_precedents.py\n"
+        "  2) 또는 GitHub Actions 의 주간 수집 워크플로(.github/workflows/ingest.yml)를 수동 실행하세요\n"
+        "  3) 의도적으로 샘플을 띄우는 개발용 시연이라면 LEGAL_AI_ENV=development 로 실행하세요"
+    )
+
+
 _state = {"ready": False, "shutting_down": False, "active_streams": 0}
 
 
@@ -124,6 +154,13 @@ app.add_middleware(
 )
 
 retriever = Retriever()
+assert_corpus_releasable(retriever.corpus_mode, LEGAL_AI_ENV)
+if retriever.corpus_mode == "sample":
+    logger.warning(
+        "샘플 법령 데이터로 실행 중입니다 (env=%s). 답변에 인용되는 조문은 실제 법이 아닙니다. "
+        "실제 데이터 수집: python tools/ingest/fetch_laws.py",
+        LEGAL_AI_ENV,
+    )
 
 
 MAX_QUESTION_CHARS = 2000
@@ -602,6 +639,7 @@ def readyz():
         content={
             "ready": ready,
             "articles": len(retriever.articles),
+            "corpus": retriever.corpus_mode,
             "shutting_down": _state["shutting_down"],
             "active_streams": _state["active_streams"],
             "breaker": breaker.state(),
@@ -613,9 +651,12 @@ def readyz():
 def health():
     return {
         "status": "ok",
-        # 배포된 버전을 외부에서 확인할 수 있게 노출합니다(연기 테스트·장애 대응에 사용).
+        # 배포된 버전을 외부에서 확인할 수 있게 노출합니다(연기 테스트와 장애 대응에 사용).
         "version": __version__,
+        # `data` 는 파일 이름이라 샘플과 실제를 구분하지 못합니다(둘 다 articles.jsonl).
+        # 구분은 `corpus` 값("real" | "sample")으로 하세요. 연기 테스트가 이 값을 검사합니다.
         "data": retriever.path.name,
+        "env": LEGAL_AI_ENV,
         "generation": bool(os.environ.get("ANTHROPIC_API_KEY")),
         "rate_limit_per_min": RATE_LIMIT_PER_MIN,
         **retriever.stats(),
