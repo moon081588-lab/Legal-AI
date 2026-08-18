@@ -6,7 +6,10 @@ venv/
 data/corpus/raw/
 # 임베딩 캐시는 말뭉치에서 다시 만들 수 있고 수십 MB라 커밋하지 않습니다.
 data/corpus/embeddings.npy
+data/corpus/embeddings.owners.npy
 data/corpus/embeddings.meta.json
+# 커밋 메시지 임시 파일
+.commit-msg.txt
 node_modules/
 frontend/.next/
 .pytest_cache/
