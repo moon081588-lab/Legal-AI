@@ -6,6 +6,7 @@ exact legal terms (전세권, 임차권 등) still match strongly.
 
 import json
 import logging
+import os
 from pathlib import Path
 
 import numpy as np
@@ -108,7 +109,7 @@ class Retriever:
             for guide_file in sorted(GUIDES_DIR.glob("*.jsonl")):
                 self.articles += _load_jsonl(guide_file)
         self.corpus_mode = self._detect_corpus_mode()
-        self.embeddings = self._load_embeddings()
+        self.embeddings, self.embed_owners = self._load_embeddings()
         corpus = [
             tokenize(f"{a['law_name']} {a['article_no']} {a.get('article_title', '')} {a['text']}")
             for a in self.articles
@@ -133,20 +134,34 @@ class Retriever:
                 return "sample"
         return "real"
 
-    def _load_embeddings(self) -> np.ndarray | None:
-        """의미 검색용 벡터. 없으면 None 이고 BM25 단독으로 동작합니다."""
+    @property
+    def retrieval_mode(self) -> str:
+        """'hybrid' = BM25 + 의미 검색, 'lexical' = BM25 단독.
+
+        같은 말뭉치라도 두 방식은 다른 결과를 냅니다. 검색 평가 기준선을 어느 쪽에서
+        기록했는지 구분하지 않으면, 임베딩 없는 CI 가 임베딩 있는 로컬의 기준선과
+        비교되어 회귀가 아닌 것을 회귀로 신고합니다.
+        """
+        return "hybrid" if self.embeddings is not None else "lexical"
+
+    def _load_embeddings(self):
+        """(벡터, 소유 조문 인덱스). 없으면 (None, None) 이고 BM25 단독으로 동작합니다."""
+        if os.environ.get("LEGAL_AI_DISABLE_EMBEDDINGS") == "1":
+            logger.info("LEGAL_AI_DISABLE_EMBEDDINGS=1: BM25 단독으로 동작합니다")
+            return None, None
         try:
             from backend.rag import embed
 
             if not embed.available():
-                return None
-            vectors = embed.load_cache(self.articles)
+                return None, None
+            cached = embed.load_cache(self.articles)
         except Exception as e:
             logger.warning("임베딩 캐시 로드 실패, BM25 단독으로 동작합니다: %s", e)
-            return None
-        if vectors is None:
+            return None, None
+        if cached is None:
             logger.info("임베딩 캐시가 없어 BM25 단독으로 동작합니다. 생성: python tools/build_embeddings.py")
-        return vectors
+            return None, None
+        return cached
 
     @staticmethod
     def kind_of(article: dict) -> str:
@@ -176,7 +191,16 @@ class Retriever:
         except Exception as e:  # 모델 로드 실패가 검색 전체를 막지는 않게 합니다
             logger.warning("임베딩 질의 인코딩 실패, BM25 로 계속합니다: %s", e)
             return []
-        return self._top_indices(self.embeddings @ q, n)
+
+        chunk_scores = self.embeddings @ q
+        if self.embed_owners is None:  # 1조문 1벡터 (구형 캐시나 테스트 주입)
+            return self._top_indices(chunk_scores, n)
+
+        # 조각 점수를 조문 단위로 최댓값 집계. 질문이 조문의 한 항에만 해당해도
+        # 그 조문 전체가 후보로 올라옵니다.
+        article_scores = np.full(len(self.articles), -1.0, dtype="float32")
+        np.maximum.at(article_scores, self.embed_owners, chunk_scores)
+        return self._top_indices(article_scores, n)
 
     @staticmethod
     def _rrf(rankings: list[tuple[list[int], float]], kconst: float = RRF_K) -> dict[int, float]:
@@ -245,5 +269,6 @@ class Retriever:
             "articles": len(self.articles),
             "cache_entries": len(self._cache),
             "corpus": self.corpus_mode,
+            "retrieval": self.retrieval_mode,
             "corpus_sources": {k: _display_path(p) for k, p in self.sources.items()},
         }

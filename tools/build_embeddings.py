@@ -34,7 +34,8 @@ def main() -> None:
     elapsed = time.monotonic() - started
 
     print(
-        f"\n완료: {meta['count']}건, {meta['dim']}차원, {elapsed:.0f}초\n"
+        f"\n완료: 조문 {meta['articles']}건 -> 조각 {meta['chunks']}개, "
+        f"{meta['dim']}차원, {elapsed:.0f}초\n"
         f"  벡터: {embed.VECTORS_FILE.relative_to(ROOT)}\n"
         f"  메타: {embed.META_FILE.relative_to(ROOT)}\n\n"
         f"검색 평가를 다시 실행해 보세요:\n"

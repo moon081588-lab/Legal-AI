@@ -63,14 +63,24 @@ def test_search_uses_embeddings_when_present(monkeypatch, retriever):
     vectors = rng.normal(size=(len(retriever.articles), dim)).astype("float32")
     vectors /= np.linalg.norm(vectors, axis=1, keepdims=True)
     retriever.embeddings = vectors
+    retriever.embed_owners = None
     retriever._cache.clear()
 
     # 특정 조문 하나를 질의 벡터와 정확히 일치시켜, 의미 순위 1위로 만듭니다.
     target = 3
     monkeypatch.setattr(embed_mod, "encode_query", lambda q, *a, **kw: vectors[target])
 
-    results = retriever.search("아무 질문이나", k=5)
-    assert retriever.articles[target]["article_no"] in [r["article_no"] for r in results]
+    # 의미 순위 자체가 그 조문을 1위로 뽑아야 합니다.
+    assert retriever._dense_ranking("아무 질문이나", 30)[0] == target
+
+    # 그리고 그 순위가 최종 결과에 실제로 반영되어야 합니다. 자리 배분과 가중치에
+    # 따라 특정 조문이 상위 5개에 들지 못할 수는 있으므로, 결과가 BM25 단독일 때와
+    # 달라졌는지로 확인합니다. 여기가 같다면 의미 검색이 꺼진 것과 다름없습니다.
+    hybrid = [r["article_no"] for r in retriever.search("아무 질문이나", k=5)]
+    retriever.embeddings = None
+    retriever._cache.clear()
+    lexical = [r["article_no"] for r in retriever.search("아무 질문이나", k=5)]
+    assert hybrid != lexical
 
 
 def test_embedding_failure_does_not_break_search(monkeypatch, retriever):
@@ -81,6 +91,7 @@ def test_embedding_failure_does_not_break_search(monkeypatch, retriever):
     import backend.rag.embed as embed_mod
 
     retriever.embeddings = np.zeros((len(retriever.articles), 4), dtype="float32")
+    retriever.embed_owners = None
     retriever._cache.clear()
 
     def boom(*a, **kw):

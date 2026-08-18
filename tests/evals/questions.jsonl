@@ -16,3 +16,19 @@
 {"question": "범죄 피해자인데 고소는 어디에 어떻게 하나요?", "expected_law": "증거확보 가이드", "expected_articles": ["가이드 8"]}
 {"question": "제가 몰래 녹음한 통화가 재판에서 증거로 인정될까요? 판례가 있나요?", "expected_law": "판례(대법원)", "expected_articles": ["2001도3106"]}
 {"question": "불법으로 얻은 증거는 재판에서 어떻게 되나요?", "expected_law": "판례(대법원)", "expected_articles": ["2007도3061", "2008도3990"]}
+{"question": "스토킹을 당하고 있어요. 가해자는 어떤 처벌을 받나요?", "expected_law": "스토킹범죄의 처벌 등에 관한 법률", "expected_articles": ["제18조", "제20조"]}
+{"question": "스토킹 가해자가 접근하지 못하게 막을 방법이 있나요?", "expected_law": "스토킹범죄의 처벌 등에 관한 법률", "expected_articles": ["제9조", "제4조", "제8조"]}
+{"question": "누가 제 몸을 몰래 촬영했어요. 어떤 죄가 되나요?", "expected_law": "성폭력범죄의 처벌 등에 관한 특례법", "expected_articles": ["제14조"]}
+{"question": "찍힌 영상으로 협박을 당하고 있어요. 처벌할 수 있나요?", "expected_law": "성폭력범죄의 처벌 등에 관한 특례법", "expected_articles": ["제14조의3"]}
+{"question": "성폭력 피해자인데 변호사를 선임할 수 있나요?", "expected_law": "성폭력범죄의 처벌 등에 관한 특례법", "expected_articles": ["제27조"]}
+{"question": "조사받을 때 혼자 가기가 무서운데 누가 같이 있어줄 수 있나요?", "expected_law": "성폭력범죄의 처벌 등에 관한 특례법", "expected_articles": ["제34조"]}
+{"question": "직장 상사가 지위를 이용해 몸을 만졌어요. 처벌되나요?", "expected_law": "성폭력범죄의 처벌 등에 관한 특례법", "expected_articles": ["제10조"]}
+{"question": "아동학대를 목격했는데 신고 의무가 있나요?", "expected_law": "아동학대범죄의 처벌 등에 관한 특례법", "expected_articles": ["제10조"]}
+{"question": "학대받는 아이를 가해자와 즉시 분리할 수 있나요?", "expected_law": "아동학대범죄의 처벌 등에 관한 특례법", "expected_articles": ["제12조", "제13조", "제19조"]}
+{"question": "남편이 때려서 신고했는데 경찰이 현장에서 무엇을 해주나요?", "expected_law": "가정폭력범죄의 처벌 등에 관한 특례법", "expected_articles": ["제5조", "제8조의2"]}
+{"question": "가정폭력 가해자를 집에서 나가게 할 수 있나요?", "expected_law": "가정폭력범죄의 처벌 등에 관한 특례법", "expected_articles": ["제29조", "제8조"]}
+{"question": "남편이 저를 때렸어요. 무슨 죄로 처벌받나요?", "expected_law": "형법", "expected_articles": ["제260조", "제257조"]}
+{"question": "죽이겠다고 문자를 계속 보내요. 이것도 죄가 되나요?", "expected_law": "형법", "expected_articles": ["제283조"]}
+{"question": "온라인에 제 험담을 퍼뜨렸어요. 명예훼손으로 고소할 수 있나요?", "expected_law": "형법", "expected_articles": ["제307조", "제309조"]}
+{"question": "범죄 피해로 치료비가 많이 나왔는데 국가에서 지원받을 수 있나요?", "expected_law": "범죄피해자 보호법", "expected_articles": ["제16조", "제17조", "제22조"]}
+{"question": "성범죄는 시간이 지나도 고소할 수 있나요?", "expected_law": "성폭력범죄의 처벌 등에 관한 특례법", "expected_articles": ["제21조"]}

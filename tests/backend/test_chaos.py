@@ -56,7 +56,12 @@ def test_repeated_failures_open_breaker(monkeypatch):
     assert app_module.breaker.is_open
     # With the breaker open we no longer call the API at all, but still answer.
     r = client.post("/api/chat", json={"question": "폭행을 당했어요"})
-    assert "증거" in _text(r) or "형사소송법" in _text(r)
+    # 어떤 조문이 오는지는 말뭉치에 따라 달라집니다(법령을 추가하면 바뀝니다).
+    # 여기서 지켜야 할 것은 "조문을 근거로 무언가 답하고, 상담처를 안내한다"는 동작이지
+    # 특정 법령명이 아닙니다. 법령명을 고정하면 수집할 때마다 테스트가 깨집니다.
+    text = _text(r)
+    assert "제" in text and "조" in text, "조문 근거가 하나도 없습니다"
+    assert "132" in text, "상담처 안내가 빠졌습니다"
     assert client.get("/api/readyz").json()["breaker"] == "open"
 
 

@@ -16,6 +16,16 @@
 
 검색을 개선해 새로 통과하는 문항이 생기면 `--update-baseline` 로 기준선을 올리세요.
 기준선은 내려가지 않습니다.
+
+## 검색 방식별로 따로 기록합니다
+
+`lexical`(BM25 단독)과 `hybrid`(BM25 + 의미 검색)는 같은 말뭉치에서도 다른 결과를
+냅니다. 임베딩이 설치되지 않은 CI 를 로컬의 hybrid 기준선과 비교하면 회귀가 아닌
+것을 회귀로 신고하고, 빌드는 영원히 빨간불이 됩니다. 그래서 두 방식의 기준선을
+따로 저장하고 각자와만 비교합니다.
+
+    python tests/evals/run_evals.py --update-baseline                          # 현재 방식
+    LEGAL_AI_DISABLE_EMBEDDINGS=1 python tests/evals/run_evals.py --update-baseline  # BM25 단독
 """
 
 import argparse
@@ -34,8 +44,9 @@ BASELINE_FILE = Path(__file__).parent / "baseline.json"
 TOP_K = 5
 
 
-def evaluate() -> list[dict]:
+def evaluate() -> tuple[list[dict], str]:
     retriever = Retriever()
+    mode = retriever.retrieval_mode
     questions = [
         json.loads(l) for l in QUESTIONS_FILE.read_text(encoding="utf-8").splitlines() if l.strip()
     ]
@@ -52,32 +63,47 @@ def evaluate() -> list[dict]:
             "ok": ok,
             "got": [f"{r['law_name']} {r['article_no']}" for r in results],
         })
-    return rows
+    return rows, mode
 
 
-def load_baseline() -> set[str] | None:
+def _read_baseline_file() -> dict:
     if not BASELINE_FILE.exists():
-        return None
-    return set(json.loads(BASELINE_FILE.read_text(encoding="utf-8"))["passing"])
+        return {}
+    try:
+        return json.loads(BASELINE_FILE.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
 
 
-def save_baseline(rows: list[dict]) -> None:
+def load_baseline(mode: str) -> set[str] | None:
+    """해당 검색 방식으로 기록된 기준선. 없으면 None.
+
+    lexical(BM25 단독)과 hybrid(BM25 + 의미 검색)는 서로 다른 결과를 냅니다.
+    임베딩이 없는 CI 를 hybrid 기준선과 비교하면, 회귀가 아닌 것을 회귀로 신고하고
+    빌드가 영구히 빨간불이 됩니다.
+    """
+    entry = _read_baseline_file().get(mode)
+    return set(entry["passing"]) if entry else None
+
+
+def save_baseline(rows: list[dict], mode: str) -> None:
     passing = sorted(r["question"] for r in rows if r["ok"])
-    BASELINE_FILE.write_text(
-        json.dumps(
-            {
-                "recorded_on": date.today().isoformat(),
-                "recall_at_5": f"{len(passing)}/{len(rows)}",
-                "note": "여기 있는 문항이 실패로 바뀌면 검색 회귀입니다. 목록은 줄어들 수 없습니다.",
-                "passing": passing,
-            },
-            ensure_ascii=False,
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
+    data = _read_baseline_file()
+    if "passing" in data:  # 검색 방식 구분이 없던 옛 형식은 버립니다
+        data = {}
+    data.setdefault(
+        "note",
+        "검색 방식별로 따로 기록합니다. 여기 있는 문항이 실패로 바뀌면 검색 회귀입니다.",
     )
-    print(f"기준선을 저장했습니다: {len(passing)}/{len(rows)} -> {BASELINE_FILE.name}")
+    data[mode] = {
+        "recorded_on": date.today().isoformat(),
+        "recall_at_5": f"{len(passing)}/{len(rows)}",
+        "passing": passing,
+    }
+    BASELINE_FILE.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    print(f"기준선을 저장했습니다 [{mode}]: {len(passing)}/{len(rows)} -> {BASELINE_FILE.name}")
 
 
 def main() -> None:
@@ -86,7 +112,7 @@ def main() -> None:
     parser.add_argument("--quiet", action="store_true", help="실패 문항만 출력")
     args = parser.parse_args()
 
-    rows = evaluate()
+    rows, mode = evaluate()
     hits = sum(r["ok"] for r in rows)
 
     for r in rows:
@@ -96,17 +122,20 @@ def main() -> None:
         if not r["ok"]:
             print(f"       got: {r['got']}")
 
-    print(f"\nRecall@{TOP_K}: {hits}/{len(rows)}")
+    label = "BM25 + 의미 검색" if mode == "hybrid" else "BM25 단독"
+    print(f"\nRecall@{TOP_K}: {hits}/{len(rows)}   (검색 방식: {mode} / {label})")
 
     if args.update_baseline:
-        save_baseline(rows)
+        save_baseline(rows, mode)
         return
 
-    baseline = load_baseline()
+    baseline = load_baseline(mode)
     if baseline is None:
         print(
-            f"\n기준선이 없습니다. 지금 결과가 만족스럽다면 아래 명령으로 고정하세요.\n"
-            f"  python {Path(__file__).relative_to(ROOT)} --update-baseline"
+            f"\n[{mode}] 기준선이 없습니다. 지금 결과가 만족스럽다면 아래 명령으로 고정하세요.\n"
+            f"  python {Path(__file__).relative_to(ROOT)} --update-baseline\n"
+            f"두 방식 모두 기록해 두세요. 임베딩 없이도 한 번:\n"
+            f"  LEGAL_AI_DISABLE_EMBEDDINGS=1 python {Path(__file__).relative_to(ROOT)} --update-baseline"
         )
         return
 
@@ -121,7 +150,7 @@ def main() -> None:
         print("  --update-baseline 로 기준선을 올려 주세요.")
 
     if regressed:
-        print(f"\n검색 회귀: 기준선에서 통과하던 문항 {len(regressed)}건이 실패합니다.")
+        print(f"\n검색 회귀 [{mode}]: 기준선에서 통과하던 문항 {len(regressed)}건이 실패합니다.")
         for q in regressed:
             print(f"  - {q[:60]}")
         sys.exit(1)

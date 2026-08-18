@@ -56,7 +56,12 @@ def fetch_law_xml(mst: str) -> bytes:
 
 def main() -> None:
     laws_file = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).parent / "laws.txt"
-    names = [l.strip() for l in laws_file.read_text(encoding="utf-8").splitlines() if l.strip()]
+    names = [
+        line.split("#")[0].strip()
+        for line in laws_file.read_text(encoding="utf-8").splitlines()
+        if line.split("#")[0].strip()
+    ]
+    print(f"법령 {len(names)}건을 수집합니다.")
     RAW_DIR.mkdir(parents=True, exist_ok=True)
 
     for name in names:
